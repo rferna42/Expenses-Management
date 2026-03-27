@@ -1,0 +1,456 @@
+@page "/"
+
+@inject ExpenseApplicationService ExpenseApplicationService
+@inject ExpenseDashboardService ExpenseDashboardService
+@inject ExpenseService ExpenseService
+
+<PageTitle>Expense Manager</PageTitle>
+
+<div class="page">
+    <header class="hero">
+        <div>
+            <h1>Expense Manager</h1>
+            <p>Track your money with clarity, one month at a time.</p>
+        </div>
+    </header>
+
+    @if (!string.IsNullOrWhiteSpace(ErrorMessage))
+    {
+        <div class="alert error">@ErrorMessage</div>
+    }
+
+    <section class="panel form-panel">
+        <div class="grid form-grid">
+            <label>
+                <span>Description</span>
+                <input @bind="PageState.NewExpense.Description" @bind:event="oninput" />
+            </label>
+            <label>
+                <span>Type</span>
+                <select @bind="PageState.NewExpenseTypeText">
+                    @foreach (var transactionType in AppConfiguration.TransactionTypes)
+                    {
+                        <option value="@transactionType">@transactionType</option>
+                    }
+                </select>
+            </label>
+            <label>
+                <span>Date (dd/MM/yyyy)</span>
+                <InputDate @bind-Value="PageState.NewExpense.Date" />
+            </label>
+            <label>
+                <span>Category</span>
+                <select @bind="PageState.NewExpense.Category">
+                    @foreach (var category in AppConfiguration.Categories)
+                    {
+                        <option value="@category">@category</option>
+                    }
+                </select>
+            </label>
+            <label>
+                <span>Amount (EUR)</span>
+                <InputNumber @bind-Value="PageState.NewExpense.Amount" step="0.01" />
+            </label>
+            <div class="action-slot">
+                <button class="primary" @onclick="AddExpenseAsync">Add</button>
+            </div>
+        </div>
+    </section>
+
+    <section class="panel toolbar">
+        <label>
+            <span>Month</span>
+            <select @bind="SelectedMonthKey">
+                @foreach (var month in AvailableMonths)
+                {
+                    <option value="@month.Key">@month.DisplayName</option>
+                }
+            </select>
+        </label>
+        <label>
+            <span>Filter by category</span>
+            <select @bind="SelectedCategory">
+                @foreach (var category in AppConfiguration.FilterCategories)
+                {
+                    <option value="@category">@category</option>
+                }
+            </select>
+        </label>
+        <label>
+            <span>Sort by</span>
+            <select @bind="SelectedSortOption">
+                @foreach (var option in AppConfiguration.SortOptions)
+                {
+                    <option value="@option.Option">@option.Label</option>
+                }
+            </select>
+        </label>
+    </section>
+
+    <footer class="summary-grid">
+        <div class="summary-card">
+            <span>Month</span>
+            <strong>@SelectedMonthLabel</strong>
+        </div>
+        <div class="summary-card income">
+            <span>Income</span>
+            <strong>@CurrentSummary.TotalIncome.ToString("C2", CultureInfo.CurrentCulture)</strong>
+        </div>
+        <div class="summary-card expense">
+            <span>Expenses</span>
+            <strong>@CurrentSummary.TotalExpenses.ToString("C2", CultureInfo.CurrentCulture)</strong>
+        </div>
+        <div class="summary-card balance">
+            <span>Balance</span>
+            <strong>@CurrentSummary.Balance.ToString("C2", CultureInfo.CurrentCulture)</strong>
+        </div>
+    </footer>
+
+    <section class="content-grid">
+        <div class="panel list-panel">
+            <div class="list-header">
+                <span>Date (dd/MM/yyyy)</span>
+                <span>Type</span>
+                <span>Category</span>
+                <span>Description</span>
+                <span>Amount (EUR)</span>
+                <span></span>
+            </div>
+
+            <div class="list-scroll">
+                @if (VisibleExpenses.Count == 0)
+                {
+                    <div class="empty-state">No transactions found for the selected month.</div>
+                }
+                else
+                {
+                    @foreach (var expense in VisibleExpenses)
+                    {
+                        var isEditing = PageState.EditingExpense?.Id == expense.Id;
+                        <div class="list-row">
+                            @if (isEditing)
+                            {
+                                <InputDate class="row-input" @bind-Value="PageState.EditingExpense!.Date" />
+                                <select class="row-input" @bind="PageState.EditingExpenseTypeText">
+                                    @foreach (var transactionType in AppConfiguration.TransactionTypes)
+                                    {
+                                        <option value="@transactionType">@transactionType</option>
+                                    }
+                                </select>
+                                <select class="row-input" @bind="PageState.EditingExpense!.Category">
+                                    @foreach (var category in AppConfiguration.Categories)
+                                    {
+                                        <option value="@category">@category</option>
+                                    }
+                                </select>
+                                <input class="row-input" @bind="PageState.EditingExpense!.Description" @bind:event="oninput" />
+                                <InputNumber class="row-input" @bind-Value="PageState.EditingExpense!.Amount" step="0.01" />
+                                <div class="row-actions">
+                                    <button class="ghost" @onclick="SaveEditAsync">Save</button>
+                                    <button class="ghost danger" @onclick="CancelEdit">Cancel</button>
+                                </div>
+                            }
+                            else
+                            {
+                                <span>@expense.Date.ToString("dd/MM/yyyy")</span>
+                                <span class="type-pill @(expense.TransactionType == TransactionType.Income ? "income" : "expense")">@expense.TransactionType</span>
+                                <span>@expense.Category</span>
+                                <span>@expense.Description</span>
+                                <span>@expense.Amount.ToString("C2", CultureInfo.CurrentCulture)</span>
+                                <div class="row-actions">
+                                    <button class="ghost" @onclick="() => BeginEdit(expense)">Edit</button>
+                                    <button class="ghost danger" @onclick="() => DeleteExpenseAsync(expense.Id)">Delete</button>
+                                </div>
+                            }
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+
+        <div class="charts-column">
+            <div class="panel chart-panel">
+                <div class="chart-header">
+                    <h2>Expense Distribution by Category</h2>
+                    <span>@SelectedMonthLabel</span>
+                </div>
+                @if (CategoryChartItems.Count == 0)
+                {
+                    <div class="empty-state">No expense data for this month.</div>
+                }
+                else
+                {
+                    <div class="donut-layout">
+                        <div class="donut" style="@GetDonutStyle()">
+                            <div class="donut-hole">
+                                <strong>@CurrentSummary.TotalExpenses.ToString("C0", CultureInfo.CurrentCulture)</strong>
+                                <span>Expenses</span>
+                            </div>
+                        </div>
+                        <div class="legend">
+                            @foreach (var item in CategoryChartItems)
+                            {
+                                <div class="legend-item">
+                                    <span class="legend-color" style="background:@item.Color"></span>
+                                    <span>@item.Category</span>
+                                    <strong>@item.Total.ToString("C2", CultureInfo.CurrentCulture)</strong>
+                                </div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="panel chart-panel">
+                <div class="chart-header">
+                    <h2>Income vs Expenses</h2>
+                    <span>@SelectedMonthLabel</span>
+                </div>
+                <div class="bar-chart">
+                    <div class="bar-group">
+                        <div class="bar income" style="height:@GetBarHeight(CurrentSummary.TotalIncome)"></div>
+                        <span>Income</span>
+                        <strong>@CurrentSummary.TotalIncome.ToString("C2", CultureInfo.CurrentCulture)</strong>
+                    </div>
+                    <div class="bar-group">
+                        <div class="bar expense" style="height:@GetBarHeight(CurrentSummary.TotalExpenses)"></div>
+                        <span>Expenses</span>
+                        <strong>@CurrentSummary.TotalExpenses.ToString("C2", CultureInfo.CurrentCulture)</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+</div>
+
+@code {
+    private static readonly string[] ChartColors =
+    [
+        "#ff5722",
+        "#e91e63",
+        "#3f51b5",
+        "#009688",
+        "#9c27b0",
+        "#f44336",
+        "#4caf50",
+        "#ff9800",
+        "#2196f3",
+        "#8bc34a"
+    ];
+
+    private readonly HomePageState PageState = new();
+    private List<Expense> AllExpenses { get; set; } = [];
+    private string SelectedCategory { get; set; } = AppConfiguration.AllCategoriesLabel;
+    private ExpenseSortOption SelectedSortOption { get; set; } = AppConfiguration.DefaultSortOption;
+    private string _selectedMonthKey = string.Empty;
+    private string? ErrorMessage { get; set; }
+
+    private string SelectedMonthKey
+    {
+        get => _selectedMonthKey;
+        set
+        {
+            if (_selectedMonthKey == value)
+            {
+                return;
+            }
+
+            _selectedMonthKey = value;
+            PageState.AlignNewExpenseDate(BuildDateInSelectedMonth(PageState.NewExpense.Date.Day));
+            ErrorMessage = null;
+        }
+    }
+
+    private List<MonthViewModel> AvailableMonths => ExpenseDashboardService
+        .GetAvailableMonths(AllExpenses, DateTime.Today)
+        .Select(month => new MonthViewModel(month.Year, month.Month))
+        .ToList();
+
+    private List<Expense> VisibleExpenses => ExpenseDashboardService.GetVisibleExpenses(
+        AllExpenses,
+        SelectedMonthOption,
+        SelectedCategory,
+        SelectedSortOption);
+
+    private MonthlySummary CurrentSummary => ExpenseDashboardService.GetSummary(AllExpenses, SelectedMonthOption);
+
+    private List<CategoryChartItem> CategoryChartItems => BuildCategoryChartItems();
+
+    private MonthOption? SelectedMonthOption => TryParseMonth(SelectedMonthKey);
+    private string SelectedMonthLabel => SelectedMonthOption?.DisplayName ?? CurrentSummary.MonthName;
+
+    protected override void OnInitialized()
+    {
+        ReloadExpenses();
+    }
+
+    private void ReloadExpenses(DateTime? preferredMonth = null)
+    {
+        AllExpenses = ExpenseApplicationService.GetAllExpenses();
+        EnsureSelectedMonth(preferredMonth);
+        PageState.ResetNewExpense(BuildDateInSelectedMonth(DateTime.Today.Day));
+        ErrorMessage = null;
+    }
+
+    private async Task AddExpenseAsync()
+    {
+        var expense = PageState.BuildNewExpense(ParseTransactionType);
+
+        if (!ExpenseService.ValidateExpense(expense, out var errorMessage))
+        {
+            ErrorMessage = errorMessage;
+            return;
+        }
+
+        ExpenseApplicationService.AddExpense(expense);
+        PageState.ResetNewExpense(BuildDateInSelectedMonth(DateTime.Today.Day));
+        ReloadExpenses(expense.Date);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void BeginEdit(Expense expense)
+    {
+        PageState.BeginEdit(expense);
+        ErrorMessage = null;
+    }
+
+    private async Task SaveEditAsync()
+    {
+        var expenseToPersist = PageState.BuildEditedExpense(ParseTransactionType);
+        if (expenseToPersist is null)
+        {
+            return;
+        }
+
+        if (!ExpenseService.ValidateExpense(expenseToPersist, out var errorMessage))
+        {
+            ErrorMessage = errorMessage;
+            return;
+        }
+
+        if (!ExpenseApplicationService.UpdateExpense(expenseToPersist))
+        {
+            ErrorMessage = "The transaction no longer exists.";
+            return;
+        }
+
+        PageState.CancelEdit();
+        ReloadExpenses(expenseToPersist.Date);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void CancelEdit()
+    {
+        PageState.CancelEdit();
+        ErrorMessage = null;
+    }
+
+    private async Task DeleteExpenseAsync(string expenseId)
+    {
+        if (!ExpenseApplicationService.DeleteExpense(expenseId))
+        {
+            return;
+        }
+
+        PageState.CancelEdit();
+        ReloadExpenses();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void EnsureSelectedMonth(DateTime? preferredMonth = null)
+    {
+        var months = ExpenseDashboardService.GetAvailableMonths(AllExpenses, DateTime.Today);
+        SelectedMonthKey = ExpenseDashboardService.ResolveSelectedMonthKey(months, SelectedMonthKey, preferredMonth);
+    }
+
+    private List<CategoryChartItem> BuildCategoryChartItems()
+    {
+        var totals = ExpenseDashboardService
+            .GetExpenseCategoryTotals(VisibleExpenses)
+            .Select((item, index) => new CategoryChartItem(
+                item.Category,
+                item.Total,
+                ChartColors[index % ChartColors.Length]))
+            .OrderByDescending(item => item.Total)
+            .ToList();
+
+        return totals;
+    }
+
+    private string GetDonutStyle()
+    {
+        if (CategoryChartItems.Count == 0)
+        {
+            return "background:conic-gradient(#d7dce6 0deg 360deg);";
+        }
+
+        var grandTotal = CategoryChartItems.Sum(item => item.Total);
+        decimal currentPercentage = 0;
+        var segments = new List<string>();
+
+        foreach (var item in CategoryChartItems)
+        {
+            var sweep = grandTotal == 0 ? 0 : item.Total / grandTotal * 100m;
+            var nextPercentage = currentPercentage + sweep;
+            segments.Add($"{item.Color} {currentPercentage:F2}% {nextPercentage:F2}%");
+            currentPercentage = nextPercentage;
+        }
+
+        return $"background:conic-gradient({string.Join(", ", segments)});";
+    }
+
+    private string GetBarHeight(decimal value)
+    {
+        var max = Math.Max(CurrentSummary.TotalIncome, CurrentSummary.TotalExpenses);
+        if (max <= 0)
+        {
+            return "8%";
+        }
+
+        var percentage = Math.Max(8m, decimal.Round(value / max * 100m, 2));
+        return $"{percentage.ToString(CultureInfo.InvariantCulture)}%";
+    }
+
+    private DateTime BuildDateInSelectedMonth(int day)
+    {
+        var targetMonth = SelectedMonthOption ?? new MonthOption(DateTime.Today.Year, DateTime.Today.Month);
+        var safeDay = Math.Min(day, DateTime.DaysInMonth(targetMonth.Year, targetMonth.Month));
+        return new DateTime(targetMonth.Year, targetMonth.Month, safeDay);
+    }
+
+    private static string BuildMonthKey(int year, int month) => $"{year:D4}-{month:D2}";
+
+    private static MonthOption? TryParseMonth(string monthKey)
+    {
+        if (string.IsNullOrWhiteSpace(monthKey))
+        {
+            return null;
+        }
+
+        var parts = monthKey.Split('-');
+        if (parts.Length != 2
+            || !int.TryParse(parts[0], out var year)
+            || !int.TryParse(parts[1], out var month))
+        {
+            return null;
+        }
+
+        return new MonthOption(year, month);
+    }
+
+    private static TransactionType ParseTransactionType(string value)
+    {
+        return Enum.TryParse<TransactionType>(value, out var result)
+            ? result
+            : TransactionType.Expense;
+    }
+
+    private sealed record MonthViewModel(int Year, int Month)
+    {
+        public string Key => BuildMonthKey(Year, Month);
+        public string DisplayName => new DateTime(Year, Month, 1).ToString("MMMM yyyy");
+    }
+
+    private sealed record CategoryChartItem(string Category, decimal Total, string Color);
+}
