@@ -84,15 +84,12 @@ public class ChartsService
     }
 
     /// <summary>
-    /// Builds the current-month income versus expenses chart.
+    /// Builds the income versus expenses chart for the requested month.
     /// </summary>
-    public PlotModel CreateIncomeVsExpensesChart(List<Expense> expenses)
+    public PlotModel CreateIncomeVsExpensesChart(List<Expense> expenses, int year, int month)
     {
-        var today = DateTime.Now;
-        
-        // Keep only current-month transactions.
         var monthExpenses = expenses
-            .Where(e => e.Date.Year == today.Year && e.Date.Month == today.Month)
+            .Where(e => e.Date.Year == year && e.Date.Month == month)
             .ToList();
 
         var totalExpenses = monthExpenses
@@ -105,7 +102,7 @@ public class ChartsService
 
         var model = new PlotModel
         {
-            Title = $"{AppConfiguration.IncomeVsExpensesChartTitle} - {today:MMMM yyyy}",
+            Title = $"{AppConfiguration.IncomeVsExpensesChartTitle} - {new DateTime(year, month, 1):MMMM yyyy}",
             TitleFontSize = 16,
             Background = OxyColor.FromRgb(255, 255, 255),
             Padding = new OxyThickness(60, 20, 20, 60)

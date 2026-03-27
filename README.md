@@ -1,28 +1,43 @@
 # FinanceProject
 
-A WPF desktop application for managing personal finances in a simple and visual way.
+A WPF desktop application for managing personal finances with a month-based workflow, local persistence, and visual summaries.
 
 ## Purpose
 
-FinanceProject is designed for users who want to track daily income and expenses, review monthly performance, and make better financial decisions with visual insights.
+FinanceProject is intended for users who want to register income and expenses month by month, review financial activity for a selected month, and understand spending patterns through charts.
 
 Main goals:
 
 - Register transactions quickly.
-- Keep a clear view of monthly balance.
+- Review movements for a specific month.
+- Keep a clear view of monthly income, expenses, and balance.
 - Understand which categories consume most spending.
-- Compare income versus expenses for the current month.
+- Compare income versus expenses for the selected month.
 
-## Features
+## Current Features
 
-The application includes:
+The application currently supports:
 
-- Add transactions with description, type (expense or income), date, category, and amount.
-- Edit and delete transactions from the main list.
-- Filter by category.
-- Sort by date, amount, or category.
-- Monthly summary with total income, total expenses, and balance.
-- Local JSON persistence so data is kept between sessions.
+- Add transactions with description, type, date, category, and amount.
+- Edit and delete transactions directly from the main list.
+- Display whether each movement is an income or an expense in the transaction list.
+- Select a specific month to view only the movements for that month.
+- Automatically calculate summary and charts for the selected month.
+- Filter the visible list by category.
+- Sort the visible list by date, amount, or category.
+- Persist data locally between sessions using SQLite.
+
+## Monthly Workflow
+
+The app is now organized around a selected month:
+
+- The top filter bar includes a month selector.
+- The transaction list shows only the movements of the selected month.
+- The summary footer updates for the selected month.
+- Both charts update for the selected month.
+- When a transaction is added, it is stored using the date selected in the DatePicker.
+
+Date handling is standardized to `dd/MM/yyyy` in the UI.
 
 ## Charts
 
@@ -30,11 +45,12 @@ The main screen includes two complementary charts:
 
 - Expense distribution by category (pie chart):
   - Includes only expense transactions.
-  - Helps quickly identify highest-impact categories.
+  - Uses the currently selected month.
+  - Helps identify the categories with the highest spending.
 
-- Income vs expenses for the current month (vertical bar chart):
-  - Compares monthly totals with vertical bars.
-  - Makes it easy to see whether the monthly balance is positive or negative.
+- Income vs expenses (vertical bar chart):
+  - Compares total income and total expenses for the selected month.
+  - Makes it easy to see whether the balance is positive or negative.
 
 ## UI Mockups (Low-Fidelity)
 
@@ -43,34 +59,19 @@ These mockups are text wireframes meant for documentation and planning.
 Main Window layout:
 
 ```text
-+--------------------------------------------------------------------------------+
-| Header: Expense Manager                                                        |
-+--------------------------------------------------------------------------------+
-| [Description____] [Type v] [Date v] [Category v] [Amount__] [Add]             |
-+--------------------------------------------------------------------------------+
-| Filter: [Category v]   Sort: [Criteria v]                                      |
-+--------------------------------------+-----------------------------------------+
-| Transaction List                     | Charts                                  |
-| - Date | Category | Desc | Amount    | [Pie: Expenses by Category]             |
-| - ...                               | [Bar: Income vs Expenses]                |
-+--------------------------------------+-----------------------------------------+
-| Monthly Summary: Income | Expenses | Balance                                   |
-+--------------------------------------------------------------------------------+
-```
-
-Edit Transaction Window layout:
-
-```text
-+----------------------------------------------+
-| Edit Transaction                             |
-+----------------------------------------------+
-| Description: [___________________________]   |
-| Date:        [______/______/______]          |
-| Category:    [_____________________ v]       |
-| Amount:      [___________________________]   |
-|                                              |
-|                          [Cancel] [Save]     |
-+----------------------------------------------+
++--------------------------------------------------------------------------------------------------+
+| Header: Expense Manager                                                                          |
++--------------------------------------------------------------------------------------------------+
+| [Description____] [Type v] [Date dd/MM/yyyy v] [Category v] [Amount__] [Add]                    |
++--------------------------------------------------------------------------------------------------+
+| Month: [March 2026 v]   Filter: [Category v]   Sort: [Criteria v]                                |
++-----------------------------------------------+--------------------------------------------------+
+| Transaction List                              | Charts                                           |
+| - Date | Type | Category | Desc | Amount      | [Pie: Expenses by Category]                      |
+| - ...                                        | [Bar: Income vs Expenses for selected month]     |
++-----------------------------------------------+--------------------------------------------------+
+| Monthly Summary: Income | Expenses | Balance                                                 |
++--------------------------------------------------------------------------------------------------+
 ```
 
 ## Architecture
@@ -80,23 +81,23 @@ The project follows a layered structure inspired by Clean Architecture to reduce
 - Views/
   - WPF presentation layer.
   - Contains UI windows and code-behind.
-  - Example: MainWindow, EditExpenseWindow.
+  - Main logic is currently centered in `MainWindow`.
 
 - Models/
-  - Domain entities.
-  - Example: Expense, TransactionType.
+  - Domain entities and UI support models.
+  - Examples: `Expense`, `TransactionType`, `ExpenseSortOption`, `MonthOption`.
 
 - Services/
-  - Business and application rules.
-  - Validation, filtering, sorting, monthly summary, and chart model generation.
+  - Business and application logic.
+  - Includes validation, filtering, sorting, monthly summary calculation, and chart model generation.
 
 - Domain/Repositories/
-  - Data access contracts (abstractions).
-  - Example: IExpenseRepository.
+  - Data access contracts.
+  - Example: `IExpenseRepository`.
 
 - Infrastructure/Repositories/
-  - Concrete persistence implementations.
-  - Example: JsonExpenseRepository.
+  - Concrete persistence implementation.
+  - Example: `SqliteExpenseRepository`.
 
 Core rule:
 
@@ -106,11 +107,37 @@ Core rule:
 
 ## Data Persistence
 
-Transactions are stored as JSON in the user's local application data folder (LocalApplicationData). This allows:
+Transactions are stored locally in SQLite.
 
-- Keeping data after closing the app.
-- Avoiding database dependency for this scenario.
-- Simpler local setup and execution.
+Current storage details:
+
+- Database engine: SQLite
+- File name: `expenses.db`
+- Folder: `LocalApplicationData/FinanceProject`
+
+This provides:
+
+- Data persistence between sessions.
+- Lightweight local storage with no external server.
+- A simpler setup than a remote or full relational database deployment.
+
+## Categories
+
+The application currently includes these categories:
+
+- Shopping
+- Rent
+- Dining
+- Food
+- Fuel
+- Health
+- Bills
+- Loans
+- Utilities
+- Entertainment
+- Travels
+- Other
+- Income
 
 ## Requirements
 
@@ -121,13 +148,13 @@ Transactions are stored as JSON in the user's local application data folder (Loc
 
 From the project root:
 
-1. Build:
+1. Build
 
 ```bash
 dotnet build
 ```
 
-2. Run:
+2. Run
 
 ```bash
 dotnet run
@@ -135,13 +162,13 @@ dotnet run
 
 ## Unit Tests
 
-The project includes unit tests for core logic in tests/FinanceProject.Tests.
+The project includes unit tests for the core logic in `tests/FinanceProject.Tests`.
 
 Current coverage focuses on:
 
-- ExpenseService (validation, filtering, and sorting).
-- MonthlySummaryService (monthly summary calculations).
-- ChartsService (chart model generation).
+- `ExpenseService` for validation, filtering, and sorting.
+- `MonthlySummaryService` for monthly summary calculations.
+- `ChartsService` for chart model generation and month-specific chart behavior.
 
 Run tests:
 
@@ -151,11 +178,20 @@ dotnet test
 
 ## Typical Usage Flow
 
-1. Register monthly income and expenses.
-2. Apply filters and sorting to review transactions.
-3. Check the footer summary for current balance.
-4. Use charts to identify spending patterns and adjust decisions.
+1. Select the month you want to review.
+2. Add income and expenses with the appropriate date and category.
+3. Filter or sort the visible transactions if needed.
+4. Review the summary footer for income, expenses, and balance.
+5. Use the charts to understand category spending and compare income versus expenses.
 
-## Current State and Next Steps
+## Current State
 
-The project is ready to evolve further toward a full MVVM approach, separating presentation logic even more from code-behind.
+The application currently provides a functional month-based personal finance tracker with:
+
+- English UI and documentation.
+- SQLite-based local persistence.
+- Category-based filtering and sorting.
+- Monthly summaries and charts.
+- Inline editing from the main transaction list.
+
+The next logical architectural step would be to move more presentation behavior from code-behind to a full MVVM structure.

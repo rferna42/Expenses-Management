@@ -22,9 +22,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     
     public ObservableCollection<Expense> Expenses { get; set; } = [];
     private ObservableCollection<Expense> AllExpenses { get; set; } = [];
+    public ObservableCollection<MonthOption> AvailableMonths { get; } = [];
     private string SelectedCategory = AppConfiguration.AllCategoriesLabel;
     private ExpenseSortOption SortBy = AppConfiguration.DefaultSortOption;
     private TransactionType _selectedTransactionType = TransactionType.Expense;
+    private MonthOption? _selectedMonth;
 
     public IReadOnlyList<string> Categories => AppConfiguration.Categories;
     public IReadOnlyList<string> FilterCategories => AppConfiguration.FilterCategories;
@@ -82,6 +84,19 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             }
         }
     }
+
+    public MonthOption? SelectedMonth
+    {
+        get => _selectedMonth;
+        set
+        {
+            if (_selectedMonth != value)
+            {
+                _selectedMonth = value;
+                OnPropertyChanged(nameof(SelectedMonth));
+            }
+        }
+    }
     
     public event PropertyChangedEventHandler? PropertyChanged;
     
@@ -108,15 +123,17 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         
         // Load persisted transactions.
         LoadExpenses();
+        RefreshAvailableMonths();
         
         // Initialize combo boxes with default selections.
         FilterComboBox.SelectedIndex = 0;
         CategoryComboBox.SelectedIndex = 0;
         SortComboBox.SelectedIndex = 0;
         TransactionTypeComboBox.SelectedIndex = 0;
+        MonthComboBox.SelectedItem = SelectedMonth;
         
-        // Set default date.
-        DatePicker.SelectedDate = DateTime.Today;
+        // Set default date to selected month.
+        DatePicker.SelectedDate = BuildDateInSelectedMonth(DatePicker.SelectedDate?.Day ?? DateTime.Today.Day);
         
         // Enable Enter key submission.
         DescriptionTextBox.KeyDown += TextBox_KeyDown;
@@ -154,7 +171,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         var amountText = AmountTextBox.Text.Trim();
         var selectedCategory = CategoryComboBox.SelectedItem?.ToString() ?? AppConfiguration.DefaultCategory;
-        var selectedDate = DatePicker.SelectedDate ?? DateTime.Today;
+        var selectedDate = DatePicker.SelectedDate ?? BuildDateInSelectedMonth(DateTime.Today.Day);
         
         if (AppConfiguration.TryParseAmount(amountText, out var amount))
         {
@@ -170,11 +187,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             if (_expenseService.ValidateExpense(expense, out var errorMessage))
             {
                 AllExpenses.Add(expense);
+                SelectedMonth = new MonthOption(selectedDate.Year, selectedDate.Month);
                 DescriptionTextBox.Clear();
                 AmountTextBox.Clear();
-                DatePicker.SelectedDate = DateTime.Today;
+                DatePicker.SelectedDate = BuildDateInSelectedMonth(DateTime.Today.Day);
                 DescriptionTextBox.Focus();
                 SaveExpenses();
+                RefreshAvailableMonths();
                 ApplyFilter();
             }
             else
@@ -198,6 +217,16 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         ApplyFilter();
     }
 
+    private void MonthComboBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        if (MonthComboBox.SelectedItem is MonthOption monthOption)
+        {
+            SelectedMonth = monthOption;
+            DatePicker.SelectedDate = BuildDateInSelectedMonth(DatePicker.SelectedDate?.Day ?? DateTime.Today.Day);
+            ApplyFilter();
+        }
+    }
+
     private void ApplyFilter()
     {
         SelectedCategory = FilterComboBox.SelectedItem?.ToString() ?? AppConfiguration.AllCategoriesLabel;
@@ -205,7 +234,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             ? selectedSort
             : AppConfiguration.DefaultSortOption;
         
-        var filtered = _expenseService.ApplyFilterAndSort(AllExpenses.ToList(), SelectedCategory, SortBy);
+        var monthFiltered = GetSelectedMonthExpenses(AllExpenses.ToList());
+        var filtered = _expenseService.ApplyFilterAndSort(monthFiltered, SelectedCategory, SortBy);
         
         Expenses.Clear();
         foreach (var expense in filtered)
@@ -224,7 +254,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         try
         {
-            ChartModel = _chartsService.CreateCategoryExpensesChart(AllExpenses.ToList());
+            var selectedMonthExpenses = GetSelectedMonthExpenses(AllExpenses.ToList());
+            ChartModel = _chartsService.CreateCategoryExpensesChart(selectedMonthExpenses);
             RefreshIncomeExpenseChart();
         }
         catch (Exception ex)
@@ -237,7 +268,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         try
         {
-            IncomeExpenseChartModel = _chartsService.CreateIncomeVsExpensesChart(AllExpenses.ToList());
+            var selectedMonthExpenses = GetSelectedMonthExpenses(AllExpenses.ToList());
+            var targetMonth = SelectedMonth ?? new MonthOption(DateTime.Today.Year, DateTime.Today.Month);
+            IncomeExpenseChartModel = _chartsService.CreateIncomeVsExpensesChart(
+                selectedMonthExpenses,
+                targetMonth.Year,
+                targetMonth.Month);
         }
         catch (Exception ex)
         {
@@ -249,7 +285,17 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         try
         {
-            MonthlySummary = _monthlySummaryService.GetCurrentMonthSummary(AllExpenses.ToList());
+            if (SelectedMonth is not null)
+            {
+                MonthlySummary = _monthlySummaryService.GetMonthlySummary(
+                    AllExpenses.ToList(),
+                    SelectedMonth.Year,
+                    SelectedMonth.Month);
+            }
+            else
+            {
+                MonthlySummary = _monthlySummaryService.GetCurrentMonthSummary(AllExpenses.ToList());
+            }
         }
         catch (Exception ex)
         {
@@ -278,6 +324,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             {
                 AllExpenses.Add(expense);
             }
+            RefreshAvailableMonths();
             ApplyFilter();
         }
         catch (Exception ex)
@@ -362,5 +409,50 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         {
             CancelExpenseChanges(expense);
         }
+    }
+
+    private void RefreshAvailableMonths()
+    {
+        var currentSelection = SelectedMonth;
+
+        var months = AllExpenses
+            .Select(e => new DateTime(e.Date.Year, e.Date.Month, 1))
+            .Append(new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1))
+            .Distinct()
+            .OrderByDescending(d => d)
+            .Select(d => new MonthOption(d.Year, d.Month))
+            .ToList();
+
+        AvailableMonths.Clear();
+        foreach (var month in months)
+        {
+            AvailableMonths.Add(month);
+        }
+
+        SelectedMonth = currentSelection is null
+            ? AvailableMonths.FirstOrDefault()
+            : AvailableMonths.FirstOrDefault(m => m.Year == currentSelection.Year && m.Month == currentSelection.Month)
+                ?? AvailableMonths.FirstOrDefault();
+    }
+
+    private List<Expense> GetSelectedMonthExpenses(List<Expense> source)
+    {
+        if (SelectedMonth is null)
+        {
+            return source;
+        }
+
+        return source
+            .Where(e => e.Date.Year == SelectedMonth.Year && e.Date.Month == SelectedMonth.Month)
+            .ToList();
+    }
+
+    private DateTime BuildDateInSelectedMonth(int day)
+    {
+        var selectedMonth = SelectedMonth
+            ?? new MonthOption(DateTime.Today.Year, DateTime.Today.Month);
+
+        var safeDay = Math.Min(day, DateTime.DaysInMonth(selectedMonth.Year, selectedMonth.Month));
+        return new DateTime(selectedMonth.Year, selectedMonth.Month, safeDay);
     }
 }
