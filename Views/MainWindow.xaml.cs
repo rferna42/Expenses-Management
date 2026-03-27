@@ -93,7 +93,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     public MainWindow()
     {
         _expenseService = new ExpenseService();
-        _expenseRepository = new JsonExpenseRepository();
+        _expenseRepository = new SqliteExpenseRepository();
         _chartsService = new ChartsService();
         _monthlySummaryService = new MonthlySummaryService();
         InitializeComponent();

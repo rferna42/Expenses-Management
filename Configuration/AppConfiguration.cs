@@ -26,17 +26,21 @@ public static class AppConfiguration
     public const string AmountAxisTitle = "Amount (EUR)";
 
     public const string DataFolderName = "FinanceProject";
-    public const string DataFileName = "expenses.json";
+    public const string DatabaseFileName = "expenses.db";
 
     public static readonly IReadOnlyList<string> Categories =
     [
         "Shopping",
         "Rent",
         "Dining",
+        "Food",
         "Fuel",
+        "Health",
+        "Bills",
         "Loans",
         "Utilities",
         "Entertainment",
+        "Travels",
         DefaultCategory,
         IncomeCategory
     ];
