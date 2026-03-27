@@ -98,7 +98,7 @@
         <Border Grid.Row="0" Background="#1A237E" Padding="30,20">
             <StackPanel Orientation="Vertical">
                 <TextBlock Text="💰 Expense Manager" FontSize="32" FontWeight="Bold" Foreground="White" Margin="0,0,0,10"/>
-                <TextBlock Text="Gestiona tus gastos de forma sencilla" FontSize="14" Foreground="#B3E5FC"/>
+                <TextBlock Text="Track your money with clarity" FontSize="14" Foreground="#B3E5FC"/>
             </StackPanel>
         </Border>
         
@@ -115,44 +115,33 @@
                 </Grid.ColumnDefinitions>
                 
                 <StackPanel Grid.Column="0" Orientation="Vertical" Margin="0,0,20,0">
-                    <TextBlock Text="Descripción" FontSize="12" FontWeight="SemiBold" Foreground="#666666" Margin="0,0,0,5"/>
+                    <TextBlock Text="Description" FontSize="12" FontWeight="SemiBold" Foreground="#666666" Margin="0,0,0,5"/>
                     <TextBox x:Name="DescriptionTextBox" Style="{StaticResource TextBoxStyle}" Height="40"/>
                 </StackPanel>
                 
                 <StackPanel Grid.Column="1" Orientation="Vertical" Margin="0,0,20,0">
-                    <TextBlock Text="Tipo" FontSize="12" FontWeight="SemiBold" Foreground="#666666" Margin="0,0,0,5"/>
-                    <ComboBox x:Name="TransactionTypeComboBox" Style="{StaticResource ComboBoxStyle}" Height="40" SelectedValuePath="Content">
-                        <System:String xmlns:System="clr-namespace:System;assembly=netstandard">Gasto</System:String>
-                        <System:String xmlns:System="clr-namespace:System;assembly=netstandard">Ingreso</System:String>
-                    </ComboBox>
+                    <TextBlock Text="Type" FontSize="12" FontWeight="SemiBold" Foreground="#666666" Margin="0,0,0,5"/>
+                    <ComboBox x:Name="TransactionTypeComboBox" Style="{StaticResource ComboBoxStyle}" Height="40"
+                              ItemsSource="{Binding TransactionTypes}"/>
                 </StackPanel>
                 
                 <StackPanel Grid.Column="2" Orientation="Vertical" Margin="0,0,20,0">
-                    <TextBlock Text="Fecha" FontSize="12" FontWeight="SemiBold" Foreground="#666666" Margin="0,0,0,5"/>
+                    <TextBlock Text="Date" FontSize="12" FontWeight="SemiBold" Foreground="#666666" Margin="0,0,0,5"/>
                     <DatePicker x:Name="DatePicker" Style="{StaticResource DatePickerStyle}" Height="40" VerticalContentAlignment="Center"/>
                 </StackPanel>
                 
                 <StackPanel Grid.Column="3" Orientation="Vertical" Margin="0,0,20,0">
-                    <TextBlock Text="Categoría" FontSize="12" FontWeight="SemiBold" Foreground="#666666" Margin="0,0,0,5"/>
-                    <ComboBox x:Name="CategoryComboBox" Style="{StaticResource ComboBoxStyle}" Height="40">
-                        <System:String xmlns:System="clr-namespace:System;assembly=netstandard">Compra</System:String>
-                        <System:String xmlns:System="clr-namespace:System;assembly=netstandard">Alquiler</System:String>
-                        <System:String xmlns:System="clr-namespace:System;assembly=netstandard">Restaurante</System:String>
-                        <System:String xmlns:System="clr-namespace:System;assembly=netstandard">Gasolina</System:String>
-                        <System:String xmlns:System="clr-namespace:System;assembly=netstandard">Préstamos</System:String>
-                        <System:String xmlns:System="clr-namespace:System;assembly=netstandard">Servicios</System:String>
-                        <System:String xmlns:System="clr-namespace:System;assembly=netstandard">Entretenimiento</System:String>
-                        <System:String xmlns:System="clr-namespace:System;assembly=netstandard">Otros</System:String>
-                        <System:String xmlns:System="clr-namespace:System;assembly=netstandard">Ingresos</System:String>
-                    </ComboBox>
+                    <TextBlock Text="Category" FontSize="12" FontWeight="SemiBold" Foreground="#666666" Margin="0,0,0,5"/>
+                    <ComboBox x:Name="CategoryComboBox" Style="{StaticResource ComboBoxStyle}" Height="40"
+                              ItemsSource="{Binding Categories}"/>
                 </StackPanel>
                 
                 <StackPanel Grid.Column="4" Orientation="Vertical" Margin="0,0,20,0">
-                    <TextBlock Text="Cantidad (€)" FontSize="12" FontWeight="SemiBold" Foreground="#666666" Margin="0,0,0,5"/>
+                    <TextBlock Text="Amount (EUR)" FontSize="12" FontWeight="SemiBold" Foreground="#666666" Margin="0,0,0,5"/>
                     <TextBox x:Name="AmountTextBox" Style="{StaticResource TextBoxStyle}" Height="40"/>
                 </StackPanel>
                 
-                <Button Grid.Column="5" Content="➕ Agregar" Click="AddExpenseButton_Click" 
+                <Button Grid.Column="5" Content="➕ Add" Click="AddExpenseButton_Click" 
                         Style="{StaticResource ButtonStyle}" VerticalAlignment="Bottom" Height="40"/>
             </Grid>
         </Border>
@@ -168,28 +157,15 @@
             <!-- Filter and Sort Section -->
             <Border Grid.Row="0" Background="White" Padding="20,15" BorderThickness="0,1" BorderBrush="#E0E0E0" Margin="20,10,20,0">
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="Filtrar por categoría:" FontSize="12" FontWeight="SemiBold" Foreground="#666666" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                    <ComboBox x:Name="FilterComboBox" Style="{StaticResource ComboBoxStyle}" Width="180" Height="35" SelectionChanged="FilterComboBox_SelectionChanged" Margin="0,0,30,0">
-                        <System:String xmlns:System="clr-namespace:System;assembly=netstandard">Todas</System:String>
-                        <System:String xmlns:System="clr-namespace:System;assembly=netstandard">Compra</System:String>
-                        <System:String xmlns:System="clr-namespace:System;assembly=netstandard">Alquiler</System:String>
-                        <System:String xmlns:System="clr-namespace:System;assembly=netstandard">Restaurante</System:String>
-                        <System:String xmlns:System="clr-namespace:System;assembly=netstandard">Gasolina</System:String>
-                        <System:String xmlns:System="clr-namespace:System;assembly=netstandard">Préstamos</System:String>
-                        <System:String xmlns:System="clr-namespace:System;assembly=netstandard">Servicios</System:String>
-                        <System:String xmlns:System="clr-namespace:System;assembly=netstandard">Entretenimiento</System:String>
-                        <System:String xmlns:System="clr-namespace:System;assembly=netstandard">Otros</System:String>
-                        <System:String xmlns:System="clr-namespace:System;assembly=netstandard">Ingresos</System:String>
-                    </ComboBox>
+                    <TextBlock Text="Filter by category:" FontSize="12" FontWeight="SemiBold" Foreground="#666666" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <ComboBox x:Name="FilterComboBox" Style="{StaticResource ComboBoxStyle}" Width="180" Height="35"
+                              SelectionChanged="FilterComboBox_SelectionChanged" Margin="0,0,30,0"
+                              ItemsSource="{Binding FilterCategories}"/>
                     
-                    <TextBlock Text="Ordenar por:" FontSize="12" FontWeight="SemiBold" Foreground="#666666" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                    <ComboBox x:Name="SortComboBox" Style="{StaticResource ComboBoxStyle}" Width="200" Height="35" SelectionChanged="SortComboBox_SelectionChanged">
-                        <System:String xmlns:System="clr-namespace:System;assembly=netstandard">Fecha Descendente</System:String>
-                        <System:String xmlns:System="clr-namespace:System;assembly=netstandard">Fecha Ascendente</System:String>
-                        <System:String xmlns:System="clr-namespace:System;assembly=netstandard">Cantidad Descendente</System:String>
-                        <System:String xmlns:System="clr-namespace:System;assembly=netstandard">Cantidad Ascendente</System:String>
-                        <System:String xmlns:System="clr-namespace:System;assembly=netstandard">Categoría A-Z</System:String>
-                    </ComboBox>
+                    <TextBlock Text="Sort by:" FontSize="12" FontWeight="SemiBold" Foreground="#666666" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                    <ComboBox x:Name="SortComboBox" Style="{StaticResource ComboBoxStyle}" Width="200" Height="35"
+                              SelectionChanged="SortComboBox_SelectionChanged"
+                              ItemsSource="{Binding SortOptions}" DisplayMemberPath="Label" SelectedValuePath="Option"/>
                 </StackPanel>
             </Border>
             
@@ -218,12 +194,12 @@
                                     <ColumnDefinition Width="35"/>
                                 </Grid.ColumnDefinitions>
                                 
-                                <TextBlock Grid.Column="0" Text="Fecha" FontSize="12" FontWeight="SemiBold" Foreground="#333333" VerticalAlignment="Center" Margin="10,0"/>
-                                <TextBlock Grid.Column="1" Text="Categoría" FontSize="12" FontWeight="SemiBold" Foreground="#333333" VerticalAlignment="Center" Margin="10,0"/>
-                                <TextBlock Grid.Column="2" Text="Descripción" FontSize="12" FontWeight="SemiBold" Foreground="#333333" VerticalAlignment="Center" Margin="10,0"/>
-                                <TextBlock Grid.Column="3" Text="Cantidad (€)" FontSize="12" FontWeight="SemiBold" Foreground="#333333" VerticalAlignment="Center" Margin="10,0"/>
+                                <TextBlock Grid.Column="0" Text="Date" FontSize="12" FontWeight="SemiBold" Foreground="#333333" VerticalAlignment="Center" Margin="10,0"/>
+                                <TextBlock Grid.Column="1" Text="Category" FontSize="12" FontWeight="SemiBold" Foreground="#333333" VerticalAlignment="Center" Margin="10,0"/>
+                                <TextBlock Grid.Column="2" Text="Description" FontSize="12" FontWeight="SemiBold" Foreground="#333333" VerticalAlignment="Center" Margin="10,0"/>
+                                <TextBlock Grid.Column="3" Text="Amount (EUR)" FontSize="12" FontWeight="SemiBold" Foreground="#333333" VerticalAlignment="Center" Margin="10,0"/>
                                 <TextBlock Grid.Column="4" Text="E" FontSize="12" FontWeight="SemiBold" Foreground="#333333" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,1"/>
-                                <TextBlock Grid.Column="5" Text="E" FontSize="12" FontWeight="SemiBold" Foreground="#333333" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,1"/>
+                                <TextBlock Grid.Column="5" Text="D" FontSize="12" FontWeight="SemiBold" Foreground="#333333" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,1"/>
                             </Grid>
                         </Border>
                         
@@ -241,35 +217,28 @@
                                         <ColumnDefinition Width="35"/>
                                     </Grid.ColumnDefinitions>
                                     
-                                    <!-- Modo Vista -->
+                                    <!-- View mode -->
                                     <TextBlock Grid.Column="0" Text="{Binding Date, StringFormat=dd/MM/yyyy}" VerticalAlignment="Center" FontSize="13" Foreground="#333333" Visibility="{Binding IsEditing, Converter={StaticResource InvertBoolConverter}, ConverterParameter=BoolToVis}"/>
                                     <TextBlock Grid.Column="1" Text="{Binding Category}" VerticalAlignment="Center" FontSize="13" Foreground="#333333" Visibility="{Binding IsEditing, Converter={StaticResource InvertBoolConverter}, ConverterParameter=BoolToVis}"/>
                                     <TextBlock Grid.Column="2" Text="{Binding Description}" VerticalAlignment="Center" FontSize="13" Foreground="#333333" Visibility="{Binding IsEditing, Converter={StaticResource InvertBoolConverter}, ConverterParameter=BoolToVis}"/>
                                     <TextBlock Grid.Column="3" Text="{Binding Amount, Converter={StaticResource CurrencyConverter}}" VerticalAlignment="Center" FontSize="13" Foreground="#333333" Visibility="{Binding IsEditing, Converter={StaticResource InvertBoolConverter}, ConverterParameter=BoolToVis}"/>
                                     
-                                    <!-- Modo Edición -->
+                                    <!-- Edit mode -->
                                     <TextBox Grid.Column="0" Text="{Binding Date, StringFormat=dd/MM/yyyy}" Padding="5" VerticalAlignment="Center" FontSize="12" Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibilityConverter}}"/>
-                                    <ComboBox Grid.Column="1" SelectedItem="{Binding Category}" Padding="5" FontSize="12" Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibilityConverter}}" VerticalAlignment="Center">
-                                        <System:String xmlns:System="clr-namespace:System;assembly=netstandard">Compra</System:String>
-                                        <System:String xmlns:System="clr-namespace:System;assembly=netstandard">Alquiler</System:String>
-                                        <System:String xmlns:System="clr-namespace:System;assembly=netstandard">Restaurante</System:String>
-                                        <System:String xmlns:System="clr-namespace:System;assembly=netstandard">Gasolina</System:String>
-                                        <System:String xmlns:System="clr-namespace:System;assembly=netstandard">Préstamos</System:String>
-                                        <System:String xmlns:System="clr-namespace:System;assembly=netstandard">Servicios</System:String>
-                                        <System:String xmlns:System="clr-namespace:System;assembly=netstandard">Entretenimiento</System:String>
-                                        <System:String xmlns:System="clr-namespace:System;assembly=netstandard">Otros</System:String>
-                                        <System:String xmlns:System="clr-namespace:System;assembly=netstandard">Ingresos</System:String>
-                                    </ComboBox>
+                                    <ComboBox Grid.Column="1" SelectedItem="{Binding Category}" Padding="5" FontSize="12"
+                                              Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibilityConverter}}"
+                                              VerticalAlignment="Center"
+                                              ItemsSource="{Binding DataContext.Categories, RelativeSource={RelativeSource AncestorType=Window}}"/>
                                     <TextBox Grid.Column="2" Text="{Binding Description}" Padding="5" VerticalAlignment="Center" FontSize="12" Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibilityConverter}}"/>
                                     <TextBox Grid.Column="3" Text="{Binding Amount}" Padding="5" VerticalAlignment="Center" FontSize="12" Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibilityConverter}}"/>
                                     
-                                    <!-- Botones -->
+                                    <!-- Action buttons -->
                                     <Button Grid.Column="4" Content="✏️" Background="Transparent" BorderThickness="0" FontSize="14" 
                                             Click="EditButton_Click" Cursor="Hand" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="5" Visibility="{Binding IsEditing, Converter={StaticResource InvertBoolConverter}, ConverterParameter=BoolToVis}"/>
                                     <Button Grid.Column="5" Content="🗑️" Background="Transparent" BorderThickness="0" FontSize="14" 
                                             Click="DeleteButton_Click" Cursor="Hand" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="5" Visibility="{Binding IsEditing, Converter={StaticResource InvertBoolConverter}, ConverterParameter=BoolToVis}"/>
                                     
-                                    <!-- Botones Guardar/Cancelar en edición -->
+                                    <!-- Save/Cancel buttons in edit mode -->
                                     <Button Grid.Column="4" Content="✅" Background="Transparent" BorderThickness="0" FontSize="14" 
                                             Click="SaveButton_Click" Cursor="Hand" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="5" Visibility="{Binding IsEditing, Converter={StaticResource BoolToVisibilityConverter}}"/>
                                     <Button Grid.Column="5" Content="❌" Background="Transparent" BorderThickness="0" FontSize="14" 
@@ -321,18 +290,18 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     
-                    <TextBlock Grid.Column="0" Text="{Binding MonthlySummary.MonthName, StringFormat='Resumen de {0}:'}" FontSize="14" FontWeight="SemiBold" 
+                    <TextBlock Grid.Column="0" Text="{Binding MonthlySummary.MonthName, StringFormat='Summary for {0}:'}" FontSize="14" FontWeight="SemiBold" 
                                Foreground="White" VerticalAlignment="Center"/>
                     
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="30,0" VerticalAlignment="Center">
-                        <TextBlock Text="Ingresos: " FontSize="13" Foreground="White" Margin="0,0,5,0"/>
+                        <TextBlock Text="Income: " FontSize="13" Foreground="White" Margin="0,0,5,0"/>
                         <TextBlock Text="{Binding MonthlySummary.TotalIncome, StringFormat=N2}" FontSize="14" FontWeight="SemiBold" 
                                    Foreground="#90EE90" VerticalAlignment="Center" Margin="0,0,20,0"/>
                     </StackPanel>
                     
                     <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="0,0,30,0" VerticalAlignment="Center">
-                        <TextBlock Text="Gastos: " FontSize="13" Foreground="White" Margin="0,0,5,0"/>
-                        <TextBlock x:Name="TotalTextBlock" Text="0,00" FontSize="14" FontWeight="SemiBold" 
+                        <TextBlock Text="Expenses: " FontSize="13" Foreground="White" Margin="0,0,5,0"/>
+                        <TextBlock x:Name="TotalTextBlock" Text="0.00" FontSize="14" FontWeight="SemiBold" 
                                    Foreground="#FF7F7F" VerticalAlignment="Center" Margin="0,0,20,0"/>
                     </StackPanel>
                     

@@ -1,34 +1,161 @@
 # FinanceProject
 
-A simple WPF application for managing personal expenses.
+A WPF desktop application for managing personal finances in a simple and visual way.
+
+## Purpose
+
+FinanceProject is designed for users who want to track daily income and expenses, review monthly performance, and make better financial decisions with visual insights.
+
+Main goals:
+
+- Register transactions quickly.
+- Keep a clear view of monthly balance.
+- Understand which categories consume most spending.
+- Compare income versus expenses for the current month.
+
+## Features
+
+The application includes:
+
+- Add transactions with description, type (expense or income), date, category, and amount.
+- Edit and delete transactions from the main list.
+- Filter by category.
+- Sort by date, amount, or category.
+- Monthly summary with total income, total expenses, and balance.
+- Local JSON persistence so data is kept between sessions.
+
+## Charts
+
+The main screen includes two complementary charts:
+
+- Expense distribution by category (pie chart):
+  - Includes only expense transactions.
+  - Helps quickly identify highest-impact categories.
+
+- Income vs expenses for the current month (vertical bar chart):
+  - Compares monthly totals with vertical bars.
+  - Makes it easy to see whether the monthly balance is positive or negative.
+
+## UI Mockups (Low-Fidelity)
+
+These mockups are text wireframes meant for documentation and planning.
+
+Main Window layout:
+
+```text
++--------------------------------------------------------------------------------+
+| Header: Expense Manager                                                        |
++--------------------------------------------------------------------------------+
+| [Description____] [Type v] [Date v] [Category v] [Amount__] [Add]             |
++--------------------------------------------------------------------------------+
+| Filter: [Category v]   Sort: [Criteria v]                                      |
++--------------------------------------+-----------------------------------------+
+| Transaction List                     | Charts                                  |
+| - Date | Category | Desc | Amount    | [Pie: Expenses by Category]             |
+| - ...                               | [Bar: Income vs Expenses]                |
++--------------------------------------+-----------------------------------------+
+| Monthly Summary: Income | Expenses | Balance                                   |
++--------------------------------------------------------------------------------+
+```
+
+Edit Transaction Window layout:
+
+```text
++----------------------------------------------+
+| Edit Transaction                             |
++----------------------------------------------+
+| Description: [___________________________]   |
+| Date:        [______/______/______]          |
+| Category:    [_____________________ v]       |
+| Amount:      [___________________________]   |
+|                                              |
+|                          [Cancel] [Save]     |
++----------------------------------------------+
+```
 
 ## Architecture
 
-The project now follows a layered structure inspired by Clean Architecture:
+The project follows a layered structure inspired by Clean Architecture to reduce coupling and improve maintainability.
 
-- `Models/`: domain entities (`Expense`, `TransactionType`).
-- `Views/`: WPF views and code-behind (`MainWindow`, `EditExpenseWindow`).
-- `Services/`: domain/application rules (validation, filtering, sorting, charts, monthly summary).
-- `Domain/Repositories/`: abstractions (contracts), for example `IExpenseRepository`.
-- `Infrastructure/Repositories/`: external implementation details (JSON persistence).
+- Views/
+  - WPF presentation layer.
+  - Contains UI windows and code-behind.
+  - Example: MainWindow, EditExpenseWindow.
 
-Main rule: UI depends on abstractions, and infrastructure implements those abstractions.
+- Models/
+  - Domain entities.
+  - Example: Expense, TransactionType.
+
+- Services/
+  - Business and application rules.
+  - Validation, filtering, sorting, monthly summary, and chart model generation.
+
+- Domain/Repositories/
+  - Data access contracts (abstractions).
+  - Example: IExpenseRepository.
+
+- Infrastructure/Repositories/
+  - Concrete persistence implementations.
+  - Example: JsonExpenseRepository.
+
+Core rule:
+
+- UI depends on abstractions.
+- Infrastructure implements those abstractions.
+- Business logic does not depend on storage details.
+
+## Data Persistence
+
+Transactions are stored as JSON in the user's local application data folder (LocalApplicationData). This allows:
+
+- Keeping data after closing the app.
+- Avoiding database dependency for this scenario.
+- Simpler local setup and execution.
 
 ## Requirements
 
 - .NET 8 SDK
+- Windows OS (WPF application)
 
-## How to Run
+## Run
 
-1. Install .NET 8 SDK from https://dotnet.microsoft.com/download
-2. Open the project in VS Code
-3. Run `dotnet build` to build
-4. Run `dotnet run` to launch
+From the project root:
 
-## Features
+1. Build:
 
-- Add expenses with description and amount
-- View list of expenses
-- Filter and sort by category/date/amount
-- Monthly income, expenses and balance summary
-- Charts for category distribution and income vs expenses
+```bash
+dotnet build
+```
+
+2. Run:
+
+```bash
+dotnet run
+```
+
+## Unit Tests
+
+The project includes unit tests for core logic in tests/FinanceProject.Tests.
+
+Current coverage focuses on:
+
+- ExpenseService (validation, filtering, and sorting).
+- MonthlySummaryService (monthly summary calculations).
+- ChartsService (chart model generation).
+
+Run tests:
+
+```bash
+dotnet test
+```
+
+## Typical Usage Flow
+
+1. Register monthly income and expenses.
+2. Apply filters and sorting to review transactions.
+3. Check the footer summary for current balance.
+4. Use charts to identify spending patterns and adjust decisions.
+
+## Current State and Next Steps
+
+The project is ready to evolve further toward a full MVVM approach, separating presentation logic even more from code-behind.

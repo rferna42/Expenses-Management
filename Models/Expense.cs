@@ -1,21 +1,22 @@
 using System.ComponentModel;
+using FinanceProject.Configuration;
 
 namespace FinanceProject.Models;
 
 public enum TransactionType
 {
-    Gasto,
-    Ingreso
+    Expense,
+    Income
 }
 
 public class Expense : INotifyPropertyChanged
 {
     private string _description = string.Empty;
     private decimal _amount;
-    private string _category = "Otros";
+    private string _category = AppConfiguration.DefaultCategory;
     private DateTime _date = DateTime.Now;
     private bool _isEditing;
-    private TransactionType _transactionType = TransactionType.Gasto;
+    private TransactionType _transactionType = TransactionType.Expense;
 
     public string Description
     {
@@ -95,10 +96,10 @@ public class Expense : INotifyPropertyChanged
         }
     }
 
-    // Valores originales para poder cancelar
+    // Original values used to restore state when edit is canceled.
     public string OriginalDescription { get; set; } = string.Empty;
     public decimal OriginalAmount { get; set; }
-    public string OriginalCategory { get; set; } = "Otros";
+    public string OriginalCategory { get; set; } = AppConfiguration.DefaultCategory;
     public DateTime OriginalDate { get; set; } = DateTime.Now;
 
     public event PropertyChangedEventHandler? PropertyChanged;

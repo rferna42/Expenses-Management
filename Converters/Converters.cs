@@ -10,17 +10,18 @@ public class CurrencyConverter : IValueConverter
     {
         if (value is decimal amount)
         {
-            return amount.ToString("C2", new CultureInfo("es-ES"));
+            return amount.ToString("C2", CultureInfo.CurrentCulture);
         }
-        return value ?? "0,00 €";
+        return value ?? 0m.ToString("C2", CultureInfo.CurrentCulture);
     }
 
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         if (value is string strValue)
         {
-            strValue = strValue.Replace(" €", "").Replace("€", "").Trim();
-            if (decimal.TryParse(strValue, NumberStyles.Any, new CultureInfo("es-ES"), out var result))
+            var symbol = CultureInfo.CurrentCulture.NumberFormat.CurrencySymbol;
+            strValue = strValue.Replace(symbol, "").Trim();
+            if (decimal.TryParse(strValue, NumberStyles.Any, CultureInfo.CurrentCulture, out var result))
             {
                 return result;
             }

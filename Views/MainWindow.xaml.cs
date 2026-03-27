@@ -1,8 +1,7 @@
 using System.Collections.ObjectModel;
-using System.Collections.Specialized;
 using System.ComponentModel;
-using System.Globalization;
 using System.Windows;
+using FinanceProject.Configuration;
 using FinanceProject.Domain.Repositories;
 using FinanceProject.Infrastructure.Repositories;
 using OxyPlot;
@@ -23,9 +22,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     
     public ObservableCollection<Expense> Expenses { get; set; } = [];
     private ObservableCollection<Expense> AllExpenses { get; set; } = [];
-    private string SelectedCategory = "Todas";
-    private string SortBy = "Fecha Descendente";
-    private TransactionType _selectedTransactionType = TransactionType.Gasto;
+    private string SelectedCategory = AppConfiguration.AllCategoriesLabel;
+    private ExpenseSortOption SortBy = AppConfiguration.DefaultSortOption;
+    private TransactionType _selectedTransactionType = TransactionType.Expense;
+
+    public IReadOnlyList<string> Categories => AppConfiguration.Categories;
+    public IReadOnlyList<string> FilterCategories => AppConfiguration.FilterCategories;
+    public IReadOnlyList<SortOptionItem> SortOptions => AppConfiguration.SortOptions;
+    public IReadOnlyList<TransactionType> TransactionTypes => AppConfiguration.TransactionTypes;
     
     public PlotModel? ChartModel
     {
@@ -94,7 +98,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _monthlySummaryService = new MonthlySummaryService();
         InitializeComponent();
         
-        // Establecer DataContext para bindings
+        // Set DataContext for UI bindings.
         DataContext = this;
         
         ExpensesListView.ItemsSource = Expenses;
@@ -102,32 +106,32 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         Expenses.CollectionChanged += (s, e) => RefreshChart();
         Expenses.CollectionChanged += (s, e) => RefreshMonthlySummary();
         
-        // Cargar gastos guardados
+        // Load persisted transactions.
         LoadExpenses();
         
-        // Inicializar el combo de filtro con "Todas" seleccionado
+        // Initialize combo boxes with default selections.
         FilterComboBox.SelectedIndex = 0;
         CategoryComboBox.SelectedIndex = 0;
         SortComboBox.SelectedIndex = 0;
         TransactionTypeComboBox.SelectedIndex = 0;
         
-        // Establecer la fecha por defecto a hoy
+        // Set default date.
         DatePicker.SelectedDate = DateTime.Today;
         
-        // Agregar manejadores de Enter a los TextBoxes
+        // Enable Enter key submission.
         DescriptionTextBox.KeyDown += TextBox_KeyDown;
         AmountTextBox.KeyDown += TextBox_KeyDown;
         
-        // Manejador para cambios en tipo de transacción
+        // Keep selected transaction type in sync with the combo box.
         TransactionTypeComboBox.SelectionChanged += (s, e) =>
         {
-            if (TransactionTypeComboBox.SelectedIndex == 0)
-                SelectedTransactionType = TransactionType.Gasto;
-            else if (TransactionTypeComboBox.SelectedIndex == 1)
-                SelectedTransactionType = TransactionType.Ingreso;
+            if (TransactionTypeComboBox.SelectedItem is TransactionType selectedType)
+            {
+                SelectedTransactionType = selectedType;
+            }
         };
         
-        // Inicializar gráfico y resumen
+        // Initialize chart and summary.
         RefreshChart();
         RefreshMonthlySummary();
     }
@@ -148,11 +152,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void AddExpense()
     {
-        var amountText = AmountTextBox.Text.Replace(".", ",");
-        var selectedCategory = CategoryComboBox.SelectedItem?.ToString() ?? "Otros";
+        var amountText = AmountTextBox.Text.Trim();
+        var selectedCategory = CategoryComboBox.SelectedItem?.ToString() ?? AppConfiguration.DefaultCategory;
         var selectedDate = DatePicker.SelectedDate ?? DateTime.Today;
         
-        if (decimal.TryParse(amountText, System.Globalization.NumberStyles.Any, new CultureInfo("es-ES"), out var amount))
+        if (AppConfiguration.TryParseAmount(amountText, out var amount))
         {
             var expense = new Expense 
             { 
@@ -175,12 +179,12 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             }
             else
             {
-                MessageBox.Show(errorMessage, "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                MessageBox.Show(errorMessage, AppConfiguration.ErrorDialogTitle, MessageBoxButton.OK, MessageBoxImage.Warning);
             }
         }
         else
         {
-            MessageBox.Show("Por favor, ingresa una descripción y un monto válido.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(AppConfiguration.InvalidExpenseMessage, AppConfiguration.ErrorDialogTitle, MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 
@@ -196,8 +200,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void ApplyFilter()
     {
-        SelectedCategory = FilterComboBox.SelectedItem?.ToString() ?? "Todas";
-        SortBy = SortComboBox.SelectedItem?.ToString() ?? "Fecha Descendente";
+        SelectedCategory = FilterComboBox.SelectedItem?.ToString() ?? AppConfiguration.AllCategoriesLabel;
+        SortBy = SortComboBox.SelectedValue is ExpenseSortOption selectedSort
+            ? selectedSort
+            : AppConfiguration.DefaultSortOption;
         
         var filtered = _expenseService.ApplyFilterAndSort(AllExpenses.ToList(), SelectedCategory, SortBy);
         
@@ -210,7 +216,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private void UpdateTotal()
     {
-        var totalExpenses = Expenses.Where(e => e.TransactionType == TransactionType.Gasto).Sum(e => e.Amount);
+        var totalExpenses = Expenses.Where(e => e.TransactionType == TransactionType.Expense).Sum(e => e.Amount);
         TotalTextBlock.Text = totalExpenses.ToString("N2");
     }
     
@@ -223,7 +229,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error al actualizar gráfico: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show($"{AppConfiguration.ChartErrorPrefix} {ex.Message}", AppConfiguration.ErrorDialogTitle, MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
     
@@ -235,7 +241,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error al actualizar gráfico de ingresos/gastos: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show($"{AppConfiguration.IncomeExpenseChartErrorPrefix} {ex.Message}", AppConfiguration.ErrorDialogTitle, MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
     
@@ -247,7 +253,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error al actualizar resumen: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show($"{AppConfiguration.SummaryErrorPrefix} {ex.Message}", AppConfiguration.ErrorDialogTitle, MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
     
@@ -259,7 +265,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error al guardar gastos: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show($"{AppConfiguration.SaveErrorPrefix} {ex.Message}", AppConfiguration.ErrorDialogTitle, MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
     
@@ -276,7 +282,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error al cargar gastos: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            MessageBox.Show($"{AppConfiguration.LoadErrorPrefix} {ex.Message}", AppConfiguration.ErrorDialogTitle, MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
     
@@ -292,8 +298,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         if (sender is System.Windows.Controls.Button button && button.DataContext is Expense expense)
         {
             var result = MessageBox.Show(
-                $"¿Estás seguro de que deseas eliminar este gasto? \n{expense.Description} - {expense.Amount.ToString("C2", new CultureInfo("es-ES"))}", 
-                "Confirmar eliminación", 
+                AppConfiguration.BuildDeleteConfirmationText(expense.Description, expense.Amount),
+                AppConfiguration.DeleteDialogTitle,
                 MessageBoxButton.YesNo, 
                 MessageBoxImage.Question);
             
@@ -308,7 +314,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         if (sender is System.Windows.Controls.Button button && button.DataContext is Expense expense)
         {
-            // Guardar valores originales por si cancela
+            // Keep original values so changes can be reverted.
             if (!expense.IsEditing)
             {
                 expense.OriginalDescription = expense.Description;
@@ -324,7 +330,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     {
         if (string.IsNullOrWhiteSpace(expense.Description) || expense.Amount <= 0)
         {
-            MessageBox.Show("Por favor, completa todos los campos correctamente.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(AppConfiguration.InvalidEditMessage, AppConfiguration.ErrorDialogTitle, MessageBoxButton.OK, MessageBoxImage.Warning);
             return;
         }
         

@@ -15,7 +15,7 @@ public class MonthlySummary
 public class MonthlySummaryService
 {
     /// <summary>
-    /// Obtiene resumen mensual de gastos e ingresos
+    /// Gets monthly income, expenses, and balance summary.
     /// </summary>
     public MonthlySummary GetMonthlySummary(List<Expense> expenses, int year, int month)
     {
@@ -24,11 +24,11 @@ public class MonthlySummaryService
             .ToList();
 
         var totalExpenses = monthExpenses
-            .Where(e => e.TransactionType == TransactionType.Gasto)
+            .Where(e => e.TransactionType == TransactionType.Expense)
             .Sum(e => e.Amount);
 
         var totalIncome = monthExpenses
-            .Where(e => e.TransactionType == TransactionType.Ingreso)
+            .Where(e => e.TransactionType == TransactionType.Income)
             .Sum(e => e.Amount);
 
         var balance = totalIncome - totalExpenses;
@@ -45,7 +45,7 @@ public class MonthlySummaryService
     }
 
     /// <summary>
-    /// Obtiene resumen de últimos 12 meses
+    /// Gets summaries for the last 12 months.
     /// </summary>
     public List<MonthlySummary> GetLast12MonthsSummary(List<Expense> expenses)
     {
@@ -62,7 +62,7 @@ public class MonthlySummaryService
     }
 
     /// <summary>
-    /// Resumen total actual (mes actual)
+    /// Gets summary for the current month.
     /// </summary>
     public MonthlySummary GetCurrentMonthSummary(List<Expense> expenses)
     {

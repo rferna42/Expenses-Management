@@ -7,8 +7,8 @@ public partial class App : Application
 {
     public App()
     {
-        // Configurar la cultura a español para usar euros
-        CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("es-ES");
-        CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("es-ES");
+        // Use English culture defaults across UI formatting.
+        CultureInfo.DefaultThreadCurrentCulture = new CultureInfo("en-IE");
+        CultureInfo.DefaultThreadCurrentUICulture = new CultureInfo("en-IE");
     }
 }

@@ -12,4 +12,11 @@
     <PackageReference Include="OxyPlot.Wpf" Version="2.2.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="tests\**\*.cs" />
+    <None Remove="tests\**\*" />
+    <Page Remove="tests\**\*.xaml" />
+    <ApplicationDefinition Remove="tests\**\*.xaml" />
+  </ItemGroup>
+
 </Project>

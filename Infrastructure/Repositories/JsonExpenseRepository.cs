@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.IO;
+using FinanceProject.Configuration;
 using FinanceProject.Domain.Repositories;
 using FinanceProject.Models;
 
@@ -8,14 +9,12 @@ namespace FinanceProject.Infrastructure.Repositories;
 public class JsonExpenseRepository : IExpenseRepository
 {
     private readonly string _dataFilePath;
-    private const string FolderName = "FinanceProject";
-
     public JsonExpenseRepository()
     {
         _dataFilePath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            FolderName,
-            "expenses.json"
+            AppConfiguration.DataFolderName,
+            AppConfiguration.DataFileName
         );
     }
 

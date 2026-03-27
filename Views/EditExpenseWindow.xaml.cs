@@ -1,5 +1,5 @@
-using System.Globalization;
 using System.Windows;
+using FinanceProject.Configuration;
 using FinanceProject.Models;
 
 namespace FinanceProject;
@@ -12,25 +12,27 @@ public partial class EditExpenseWindow : Window
     {
         InitializeComponent();
         _expense = expense;
+
+        CategoryComboBox.ItemsSource = AppConfiguration.Categories;
         
-        // Cargar datos del gasto
+        // Load current transaction values.
         DescriptionTextBox.Text = expense.Description;
         DatePicker.SelectedDate = expense.Date;
         CategoryComboBox.SelectedItem = expense.Category;
-        AmountTextBox.Text = expense.Amount.ToString("F2", new CultureInfo("es-ES"));
+        AmountTextBox.Text = expense.Amount.ToString("F2");
     }
 
     private void Save_Click(object sender, RoutedEventArgs e)
     {
-        var amountText = AmountTextBox.Text.Replace(".", ",");
+        var amountText = AmountTextBox.Text.Trim();
         
-        if (decimal.TryParse(amountText, System.Globalization.NumberStyles.Any, new CultureInfo("es-ES"), out var amount) && 
+        if (AppConfiguration.TryParseAmount(amountText, out var amount) && 
             !string.IsNullOrWhiteSpace(DescriptionTextBox.Text) &&
             DatePicker.SelectedDate.HasValue)
         {
             _expense.Description = DescriptionTextBox.Text;
             _expense.Date = DatePicker.SelectedDate.Value;
-            _expense.Category = CategoryComboBox.SelectedItem?.ToString() ?? "Otros";
+            _expense.Category = CategoryComboBox.SelectedItem?.ToString() ?? AppConfiguration.DefaultCategory;
             _expense.Amount = amount;
             
             DialogResult = true;
@@ -38,7 +40,7 @@ public partial class EditExpenseWindow : Window
         }
         else
         {
-            MessageBox.Show("Por favor, rellena todos los campos correctamente.", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+            MessageBox.Show(AppConfiguration.InvalidEditMessage, AppConfiguration.ErrorDialogTitle, MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
 

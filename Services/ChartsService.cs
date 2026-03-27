@@ -1,6 +1,7 @@
 using OxyPlot;
 using OxyPlot.Axes;
 using OxyPlot.Series;
+using FinanceProject.Configuration;
 using FinanceProject.Models;
 
 namespace FinanceProject.Services;
@@ -8,16 +9,16 @@ namespace FinanceProject.Services;
 public class ChartsService
 {
     /// <summary>
-    /// Crea un gráfico de pastel mostrando gastos por categoría (solo gastos, excluye ingresos)
+    /// Builds a pie chart with expense totals by category.
     /// </summary>
     public PlotModel CreateCategoryExpensesChart(List<Expense> expenses)
     {
-        // Filtrar solo gastos
-        var onlyExpenses = expenses.Where(e => e.TransactionType == TransactionType.Gasto).ToList();
+        // Include only expense transactions in the category chart.
+        var onlyExpenses = expenses.Where(e => e.TransactionType == TransactionType.Expense).ToList();
         
         var model = new PlotModel 
         { 
-            Title = "Distribución de Gastos por Categoría", 
+            Title = AppConfiguration.PieChartTitle,
             TitleFontSize = 16,
             Background = OxyColor.FromRgb(255, 255, 255),
             Padding = new OxyThickness(10, 10, 10, 10)
@@ -26,15 +27,15 @@ public class ChartsService
         var pieSeries = new PieSeries 
         { 
             StrokeThickness = 2.0,
-            InsideLabelPosition = 0.65, // Etiquetas dentro del pastel
+            InsideLabelPosition = 0.65,
             FontSize = 10,
             FontWeight = OxyPlot.FontWeights.Bold,
-            TextColor = OxyColor.FromRgb(255, 255, 255) // Texto blanco
+            TextColor = OxyColor.FromRgb(255, 255, 255)
         };
 
-        // Agrupar gastos por categoría (excluyendo "Ingresos")
+        // Group expenses by category while excluding income category label.
         var groupedExpenses = onlyExpenses
-            .Where(e => e.Category != "Ingresos")
+            .Where(e => e.Category != AppConfiguration.IncomeCategory)
             .GroupBy(e => e.Category)
             .Select(g => new
             {
@@ -46,22 +47,22 @@ public class ChartsService
 
         if (groupedExpenses.Count == 0)
         {
-            return model; // Retornar gráfico vacío si no hay gastos
+            return model;
         }
 
-        // Definir colores vibrantes y diferenciados
+        // Predefined palette for consistent category colors.
         var colors = new OxyColor[]
         {
-            OxyColor.FromRgb(255, 87, 34),      // Naranja profundo
-            OxyColor.FromRgb(233, 30, 99),      // Rosa
-            OxyColor.FromRgb(63, 81, 181),      // Índigo
-            OxyColor.FromRgb(0, 150, 136),      // Verde azulado
-            OxyColor.FromRgb(156, 39, 176),     // Púrpura
-            OxyColor.FromRgb(244, 67, 54),      // Rojo
-            OxyColor.FromRgb(76, 175, 80),      // Verde
-            OxyColor.FromRgb(255, 152, 0),      // Naranja
-            OxyColor.FromRgb(33, 150, 243),     // Azul claro
-            OxyColor.FromRgb(139, 195, 74)      // Lima
+            OxyColor.FromRgb(255, 87, 34),
+            OxyColor.FromRgb(233, 30, 99),
+            OxyColor.FromRgb(63, 81, 181),
+            OxyColor.FromRgb(0, 150, 136),
+            OxyColor.FromRgb(156, 39, 176),
+            OxyColor.FromRgb(244, 67, 54),
+            OxyColor.FromRgb(76, 175, 80),
+            OxyColor.FromRgb(255, 152, 0),
+            OxyColor.FromRgb(33, 150, 243),
+            OxyColor.FromRgb(139, 195, 74)
         };
 
         for (int i = 0; i < groupedExpenses.Count; i++)
@@ -83,56 +84,56 @@ public class ChartsService
     }
 
     /// <summary>
-    /// Crea un gráfico de columnas comparando ingresos vs gastos
+    /// Builds the current-month income versus expenses chart.
     /// </summary>
     public PlotModel CreateIncomeVsExpensesChart(List<Expense> expenses)
     {
         var today = DateTime.Now;
         
-        // Filtrar por mes actual
+        // Keep only current-month transactions.
         var monthExpenses = expenses
             .Where(e => e.Date.Year == today.Year && e.Date.Month == today.Month)
             .ToList();
 
         var totalExpenses = monthExpenses
-            .Where(e => e.TransactionType == TransactionType.Gasto)
+            .Where(e => e.TransactionType == TransactionType.Expense)
             .Sum(e => e.Amount);
 
         var totalIncome = monthExpenses
-            .Where(e => e.TransactionType == TransactionType.Ingreso)
+            .Where(e => e.TransactionType == TransactionType.Income)
             .Sum(e => e.Amount);
 
         var model = new PlotModel
         {
-            Title = $"Ingresos vs Gastos - {today:MMMM yyyy}",
+            Title = $"{AppConfiguration.IncomeVsExpensesChartTitle} - {today:MMMM yyyy}",
             TitleFontSize = 16,
             Background = OxyColor.FromRgb(255, 255, 255),
             Padding = new OxyThickness(60, 20, 20, 60)
         };
 
-        // Crear CategoryAxis para el eje X (abajo)
+        // X axis categories.
         var categoryAxis = new CategoryAxis
         {
             Position = AxisPosition.Bottom,
             Key = "Categories",
             FontSize = 12
         };
-        categoryAxis.Labels.Add("Ingresos");
-        categoryAxis.Labels.Add("Gastos");
+        categoryAxis.Labels.Add("Income");
+        categoryAxis.Labels.Add("Expenses");
         model.Axes.Add(categoryAxis);
 
-        // Crear LinearAxis para el eje Y (izquierda) - Valores
+        // Y axis values.
         var valueAxis = new LinearAxis
         {
             Position = AxisPosition.Left,
             Key = "Values",
             FontSize = 12,
-            Title = "Cantidad (€)",
+            Title = AppConfiguration.AmountAxisTitle,
             TitleFontSize = 12
         };
         model.Axes.Add(valueAxis);
 
-        // Crear barras verticales usando RectangleBarSeries (compatible con OxyPlot 2.2)
+        // Vertical bars using RectangleBarSeries for OxyPlot 2.2 compatibility.
         var barsSeries = new RectangleBarSeries
         {
             XAxisKey = "Categories",
@@ -143,12 +144,12 @@ public class ChartsService
         // x0, y0, x1, y1
         barsSeries.Items.Add(new RectangleBarItem(-0.3, 0, 0.3, (double)totalIncome)
         {
-            Color = OxyColor.FromRgb(76, 175, 80) // Verde
+            Color = OxyColor.FromRgb(76, 175, 80)
         });
         
         barsSeries.Items.Add(new RectangleBarItem(0.7, 0, 1.3, (double)totalExpenses)
         {
-            Color = OxyColor.FromRgb(244, 67, 54) // Rojo
+            Color = OxyColor.FromRgb(244, 67, 54)
         });
 
         model.Series.Add(barsSeries);
@@ -156,12 +157,12 @@ public class ChartsService
     }
 
     /// <summary>
-    /// Calcula el total de gastos por categoría (solo gastos)
+    /// Returns total expenses grouped by category.
     /// </summary>
     public Dictionary<string, decimal> GetExpensesByCategory(List<Expense> expenses)
     {
         return expenses
-            .Where(e => e.TransactionType == TransactionType.Gasto && e.Category != "Ingresos")
+            .Where(e => e.TransactionType == TransactionType.Expense && e.Category != AppConfiguration.IncomeCategory)
             .GroupBy(e => e.Category)
             .ToDictionary(g => g.Key, g => g.Sum(e => e.Amount))
             .OrderByDescending(x => x.Value)
