@@ -18,6 +18,7 @@
     <None Remove="tests\**\*" />
     <Page Remove="tests\**\*.xaml" />
     <ApplicationDefinition Remove="tests\**\*.xaml" />
+    <Page Remove="MainWindow.xaml" />
   </ItemGroup>
 
 </Project>
