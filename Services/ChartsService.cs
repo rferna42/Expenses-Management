@@ -110,10 +110,10 @@ public class ChartsService
             Padding = new OxyThickness(60, 20, 20, 60)
         };
 
-        // Crear CategoryAxis para el eje Y (izquierda) - Requerido para BarSeries
+        // Crear CategoryAxis para el eje X (abajo)
         var categoryAxis = new CategoryAxis
         {
-            Position = AxisPosition.Left,
+            Position = AxisPosition.Bottom,
             Key = "Categories",
             FontSize = 12
         };
@@ -121,10 +121,10 @@ public class ChartsService
         categoryAxis.Labels.Add("Gastos");
         model.Axes.Add(categoryAxis);
 
-        // Crear LinearAxis para el eje X (bottom) - Valores
+        // Crear LinearAxis para el eje Y (izquierda) - Valores
         var valueAxis = new LinearAxis
         {
-            Position = AxisPosition.Bottom,
+            Position = AxisPosition.Left,
             Key = "Values",
             FontSize = 12,
             Title = "Cantidad (€)",
@@ -132,29 +132,26 @@ public class ChartsService
         };
         model.Axes.Add(valueAxis);
 
-        // Crear serie de barras horizontales
-        var barSeries = new BarSeries
+        // Crear barras verticales usando RectangleBarSeries (compatible con OxyPlot 2.2)
+        var barsSeries = new RectangleBarSeries
         {
-            XAxisKey = "Values",
-            YAxisKey = "Categories",
-            StrokeThickness = 0,
-            BarWidth = 0.6
+            XAxisKey = "Categories",
+            YAxisKey = "Values",
+            StrokeThickness = 0
         };
 
-        // Agregar barras
-        barSeries.Items.Add(new BarItem 
-        { 
-            Value = (double)totalIncome,
+        // x0, y0, x1, y1
+        barsSeries.Items.Add(new RectangleBarItem(-0.3, 0, 0.3, (double)totalIncome)
+        {
             Color = OxyColor.FromRgb(76, 175, 80) // Verde
         });
         
-        barSeries.Items.Add(new BarItem 
-        { 
-            Value = (double)totalExpenses,
+        barsSeries.Items.Add(new RectangleBarItem(0.7, 0, 1.3, (double)totalExpenses)
+        {
             Color = OxyColor.FromRgb(244, 67, 54) // Rojo
         });
 
-        model.Series.Add(barSeries);
+        model.Series.Add(barsSeries);
         return model;
     }
 

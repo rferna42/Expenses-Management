@@ -7,7 +7,9 @@
         xmlns:converters="clr-namespace:FinanceProject.Converters"
         xmlns:oxy="clr-namespace:OxyPlot.Wpf;assembly=OxyPlot.Wpf"
         mc:Ignorable="d"
-        Title="Expense Manager" Height="850" Width="1600" Background="#F5F7FA">
+    Title="Expense Manager" Height="850" Width="1600"
+    WindowState="Maximized" Background="#F5F7FA"
+    UseLayoutRounding="True" SnapsToDevicePixels="True">
     <Window.Resources>
         <converters:CurrencyConverter x:Key="CurrencyConverter"/>
         <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
@@ -15,7 +17,7 @@
         
         <Style x:Key="ComboBoxStyle" TargetType="ComboBox">
             <Setter Property="Padding" Value="12,8"/>
-            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontSize" Value="15"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="BorderBrush" Value="#E0E0E0"/>
             <Setter Property="Background" Value="White"/>
@@ -24,7 +26,7 @@
         
         <Style x:Key="DatePickerStyle" TargetType="DatePicker">
             <Setter Property="Padding" Value="12,8"/>
-            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontSize" Value="15"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="BorderBrush" Value="#E0E0E0"/>
             <Setter Property="Background" Value="White"/>
@@ -34,7 +36,7 @@
         <!-- Estilos personalizados -->
         <Style x:Key="TextBoxStyle" TargetType="TextBox">
             <Setter Property="Padding" Value="12,8"/>
-            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontSize" Value="15"/>
             <Setter Property="BorderThickness" Value="1"/>
             <Setter Property="BorderBrush" Value="#E0E0E0"/>
             <Setter Property="Background" Value="White"/>
@@ -55,7 +57,7 @@
         
         <Style x:Key="ButtonStyle" TargetType="Button">
             <Setter Property="Padding" Value="20,10"/>
-            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontSize" Value="15"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="Background" Value="#2E7D32"/>
@@ -84,7 +86,8 @@
         </Style>
     </Window.Resources>
     
-    <Grid>
+    <Viewbox Stretch="Uniform" StretchDirection="DownOnly">
+    <Grid Width="1600" Height="850">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -293,16 +296,16 @@
                     <!-- Right column: Charts -->
                     <Border Grid.Column="1" Background="#FAFAFA" CornerRadius="8" BorderBrush="#E0E0E0" BorderThickness="1" Margin="10,0,0,0" Padding="10">
                         <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="*"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
                             
                             <!-- Pie Chart -->
-                            <oxy:PlotView Grid.Row="0" Model="{Binding ChartModel}" Background="Transparent" Margin="0,0,0,10"/>
+                            <oxy:PlotView Grid.Column="0" Model="{Binding ChartModel}" Background="Transparent" Margin="0,0,5,0"/>
                             
                             <!-- Bar Chart -->
-                            <oxy:PlotView Grid.Row="1" Model="{Binding IncomeExpenseChartModel}" Background="Transparent"/>
+                            <oxy:PlotView Grid.Column="1" Model="{Binding IncomeExpenseChartModel}" Background="Transparent" Margin="5,0,0,0"/>
                         </Grid>
                     </Border>
                 </Grid>
@@ -322,19 +325,19 @@
                                Foreground="White" VerticalAlignment="Center"/>
                     
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="30,0" VerticalAlignment="Center">
-                        <TextBlock Text="Ingresos: " FontSize="12" Foreground="White" Margin="0,0,5,0"/>
+                        <TextBlock Text="Ingresos: " FontSize="13" Foreground="White" Margin="0,0,5,0"/>
                         <TextBlock Text="{Binding MonthlySummary.TotalIncome, StringFormat=N2}" FontSize="14" FontWeight="SemiBold" 
                                    Foreground="#90EE90" VerticalAlignment="Center" Margin="0,0,20,0"/>
                     </StackPanel>
                     
                     <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="0,0,30,0" VerticalAlignment="Center">
-                        <TextBlock Text="Gastos: " FontSize="12" Foreground="White" Margin="0,0,5,0"/>
+                        <TextBlock Text="Gastos: " FontSize="13" Foreground="White" Margin="0,0,5,0"/>
                         <TextBlock x:Name="TotalTextBlock" Text="0,00" FontSize="14" FontWeight="SemiBold" 
                                    Foreground="#FF7F7F" VerticalAlignment="Center" Margin="0,0,20,0"/>
                     </StackPanel>
                     
                     <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="Balance: " FontSize="12" Foreground="White" Margin="0,0,5,0"/>
+                        <TextBlock Text="Balance: " FontSize="13" Foreground="White" Margin="0,0,5,0"/>
                         <TextBlock Text="{Binding MonthlySummary.Balance, StringFormat=N2}" FontSize="16" FontWeight="Bold" 
                                    Foreground="#4FD1C7" VerticalAlignment="Center"/>
                     </StackPanel>
@@ -342,4 +345,5 @@
             </Border>
         </Grid>
     </Grid>
+    </Viewbox>
 </Window>

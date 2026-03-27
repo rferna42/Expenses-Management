@@ -1,68 +1,9 @@
-using System.Collections.ObjectModel;
-using System.Globalization;
-using System.IO;
-using System.Text.Json;
-using System.Windows;
 using FinanceProject.Models;
 
 namespace FinanceProject.Services;
 
 public class ExpenseService
 {
-    private readonly string _dataFilePath;
-    private const string FolderName = "FinanceProject";
-
-    public ExpenseService()
-    {
-        _dataFilePath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            FolderName,
-            "expenses.json"
-        );
-    }
-
-    /// <summary>
-    /// Carga todos los gastos desde el archivo JSON
-    /// </summary>
-    public List<Expense> LoadExpenses()
-    {
-        try
-        {
-            EnsureDirectoryExists();
-
-            if (File.Exists(_dataFilePath))
-            {
-                var json = File.ReadAllText(_dataFilePath);
-                return JsonSerializer.Deserialize<List<Expense>>(json) ?? [];
-            }
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"Error al cargar gastos: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-
-        return [];
-    }
-
-    /// <summary>
-    /// Guarda los gastos en archivo JSON
-    /// </summary>
-    public void SaveExpenses(List<Expense> expenses)
-    {
-        try
-        {
-            EnsureDirectoryExists();
-
-            var options = new JsonSerializerOptions { WriteIndented = true };
-            var json = JsonSerializer.Serialize(expenses, options);
-            File.WriteAllText(_dataFilePath, json);
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"Error al guardar gastos: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
-    }
-
     /// <summary>
     /// Filtra gastos por categoría
     /// </summary>
@@ -122,15 +63,4 @@ public class ExpenseService
         return true;
     }
 
-    /// <summary>
-    /// Asegura que el directorio de datos existe
-    /// </summary>
-    private void EnsureDirectoryExists()
-    {
-        var directory = Path.GetDirectoryName(_dataFilePath);
-        if (directory != null && !Directory.Exists(directory))
-        {
-            Directory.CreateDirectory(directory);
-        }
-    }
 }

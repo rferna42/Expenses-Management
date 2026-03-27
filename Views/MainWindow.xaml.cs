@@ -3,6 +3,8 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Globalization;
 using System.Windows;
+using FinanceProject.Domain.Repositories;
+using FinanceProject.Infrastructure.Repositories;
 using OxyPlot;
 using FinanceProject.Models;
 using FinanceProject.Services;
@@ -12,6 +14,7 @@ namespace FinanceProject;
 public partial class MainWindow : Window, INotifyPropertyChanged
 {
     private readonly ExpenseService _expenseService;
+    private readonly IExpenseRepository _expenseRepository;
     private readonly ChartsService _chartsService;
     private readonly MonthlySummaryService _monthlySummaryService;
     private PlotModel? _chartModel;
@@ -86,6 +89,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     public MainWindow()
     {
         _expenseService = new ExpenseService();
+        _expenseRepository = new JsonExpenseRepository();
         _chartsService = new ChartsService();
         _monthlySummaryService = new MonthlySummaryService();
         InitializeComponent();
@@ -249,17 +253,31 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     
     private void SaveExpenses()
     {
-        _expenseService.SaveExpenses(AllExpenses.ToList());
+        try
+        {
+            _expenseRepository.Save(AllExpenses.ToList());
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error al guardar gastos: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
     
     private void LoadExpenses()
     {
-        var expenses = _expenseService.LoadExpenses();
-        foreach (var expense in expenses)
+        try
         {
-            AllExpenses.Add(expense);
+            var expenses = _expenseRepository.Load();
+            foreach (var expense in expenses)
+            {
+                AllExpenses.Add(expense);
+            }
+            ApplyFilter();
         }
-        ApplyFilter();
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error al cargar gastos: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
     
     public void DeleteExpense(Expense expense)
