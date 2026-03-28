@@ -75,7 +75,6 @@ body {
 .summary-grid,
 .list-header,
 .list-row,
-.donut-layout,
 .bar-chart {
     display: grid;
 }
@@ -231,14 +230,17 @@ button.ghost.danger {
 }
 
 .charts-column {
-    display: grid;
-    grid-template-rows: auto auto;
-    align-content: start;
+    display: flex;
+    flex-direction: column;
     gap: 12px;
 }
 
 .chart-panel {
     min-height: 264px;
+}
+
+.charts-column .chart-panel:last-child {
+    flex: 1;
 }
 
 .chart-header {
@@ -260,9 +262,10 @@ button.ghost.danger {
 }
 
 .donut-layout {
-    grid-template-columns: 190px 1fr;
-    gap: 16px;
+    display: flex;
+    flex-direction: column;
     align-items: center;
+    gap: 16px;
 }
 
 .donut {
@@ -298,13 +301,16 @@ button.ghost.danger {
 
 .legend {
     display: grid;
-    gap: 10px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0;
+    width: 100%;
 }
 
 .legend-item {
     display: grid;
     grid-template-columns: 12px 1fr auto;
     gap: 10px;
+    font-size: 10px;
     align-items: center;
 }
 
@@ -315,18 +321,28 @@ button.ghost.danger {
 }
 
 .bar-chart {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
     gap: 24px;
-    align-items: end;
-    min-height: 190px;
+    justify-content: center;
+    align-items: flex-end;
+    padding: 0 16px 4px;
 }
 
 .bar-group {
-    display: grid;
-    justify-items: center;
-    align-items: end;
-    gap: 10px;
-    min-height: 180px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    max-width: 140px;
+}
+
+.bar-area {
+    height: 150px;
+    width: 100%;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
 }
 
 .bar {
@@ -384,9 +400,12 @@ button.ghost.danger {
     .form-grid,
     .toolbar,
     .content-grid,
-    .summary-grid,
-    .donut-layout {
+    .summary-grid {
         grid-template-columns: 1fr;
+    }
+
+    .donut-layout {
+        align-items: center;
     }
 
     .list-header,
@@ -408,7 +427,7 @@ button.ghost.danger {
     }
 
     .charts-column {
-        grid-template-rows: none;
+        align-items: stretch;
     }
 }
 
@@ -431,3 +450,5 @@ button.ghost.danger {
         width: 68px;
     }
 }
+
+

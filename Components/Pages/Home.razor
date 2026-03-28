@@ -208,12 +208,16 @@
                 </div>
                 <div class="bar-chart">
                     <div class="bar-group">
-                        <div class="bar income" style="height:@GetBarHeight(CurrentSummary.TotalIncome)"></div>
+                        <div class="bar-area">
+                            <div class="bar income" style="height:@GetBarHeight(CurrentSummary.TotalIncome)"></div>
+                        </div>
                         <span>Income</span>
                         <strong>@CurrentSummary.TotalIncome.ToString("C2", CultureInfo.CurrentCulture)</strong>
                     </div>
                     <div class="bar-group">
-                        <div class="bar expense" style="height:@GetBarHeight(CurrentSummary.TotalExpenses)"></div>
+                        <div class="bar-area">
+                            <div class="bar expense" style="height:@GetBarHeight(CurrentSummary.TotalExpenses)"></div>
+                        </div>
                         <span>Expenses</span>
                         <strong>@CurrentSummary.TotalExpenses.ToString("C2", CultureInfo.CurrentCulture)</strong>
                     </div>
