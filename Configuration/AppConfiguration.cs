@@ -6,8 +6,8 @@ namespace FinanceProject.Configuration;
 public static class AppConfiguration
 {
     public const string AllCategoriesLabel = "All";
-    public const string DefaultCategory = "Other";
-    public const string IncomeCategory = "Income";
+    public const string DefaultCategory = "Compras";
+    public const string IncomeCategory = "Ingresos";
 
     public const string ErrorDialogTitle = "Error";
     public const string DeleteDialogTitle = "Confirm deletion";
@@ -30,19 +30,17 @@ public static class AppConfiguration
 
     public static readonly IReadOnlyList<string> Categories =
     [
-        "Shopping",
-        "Rent",
-        "Dining",
-        "Food",
-        "Fuel",
+        IncomeCategory,
+        "Cuotas",
+        "Suscripciones",
         "Health",
-        "Bills",
-        "Loans",
-        "Utilities",
-        "Entertainment",
-        "Travels",
-        DefaultCategory,
-        IncomeCategory
+        "Hogar",
+        "Alimentación",
+        "Vehículos",
+        "Viajes",
+        "Ocio",
+        "Restaurantes",
+        "Compras"
     ];
 
     public static readonly IReadOnlyList<string> FilterCategories =
@@ -72,7 +70,7 @@ public static class AppConfiguration
         new(ExpenseSortOption.CategoryAscending, "Category A-Z")
     ];
 
-    public const ExpenseSortOption DefaultSortOption = ExpenseSortOption.DateDescending;
+    public const ExpenseSortOption DefaultSortOption = ExpenseSortOption.DateAscending;
 
     public static string BuildDeleteConfirmationText(string description, decimal amount)
     {

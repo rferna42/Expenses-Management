@@ -13,11 +13,18 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-builder.Services.AddSingleton<IExpenseRepository, SqliteExpenseRepository>();
+builder.Services.AddSingleton<SqliteExpenseRepository>();
+builder.Services.AddSingleton<IExpenseRepository>(sp => sp.GetRequiredService<SqliteExpenseRepository>());
+builder.Services.AddSingleton<ICategoryRepository>(sp => sp.GetRequiredService<SqliteExpenseRepository>());
 builder.Services.AddScoped<ExpenseApplicationService>();
+builder.Services.AddScoped<CategoryApplicationService>();
+builder.Services.AddSingleton<CategoryMappingService>();
+builder.Services.AddScoped<PresentationFormattingService>();
 builder.Services.AddScoped<ExpenseDashboardService>();
 builder.Services.AddSingleton<ExpenseService>();
 builder.Services.AddSingleton<MonthlySummaryService>();
+builder.Services.AddScoped<LocalizationService>();
+builder.Services.AddScoped<CategoryManagerUiState>();
 
 var app = builder.Build();
 

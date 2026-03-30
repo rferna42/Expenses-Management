@@ -182,6 +182,80 @@ public sealed class SqliteExpenseRepositoryTests : IDisposable
         Assert.False(string.IsNullOrWhiteSpace(migrated.Id));
     }
 
+    [Fact]
+    public void Constructor_SeedsDefaultCategories()
+    {
+        var repository = new SqliteExpenseRepository(_databasePath);
+
+        var categories = repository.LoadCategories();
+
+        Assert.Contains("Ingresos", categories);
+        Assert.Contains("Compras", categories);
+        Assert.NotEmpty(categories);
+    }
+
+    [Fact]
+    public void AddCategory_AndCategoryExists_WorkAsExpected()
+    {
+        var repository = new SqliteExpenseRepository(_databasePath);
+
+        repository.AddCategory("Mascotas");
+
+        var categories = repository.LoadCategories();
+        Assert.Contains("Mascotas", categories);
+        Assert.True(repository.CategoryExists("Mascotas"));
+        Assert.True(repository.CategoryExists("mascotas"));
+    }
+
+    [Fact]
+    public void RenameCategory_UpdatesCategoryAndLinkedExpenses()
+    {
+        var repository = new SqliteExpenseRepository(_databasePath);
+        repository.AddCategory("Mascotas");
+        repository.Upsert(new Expense
+        {
+            Id = "pet-1",
+            Description = "Vet",
+            Amount = 45m,
+            Category = "Mascotas",
+            Date = new DateTime(2026, 3, 7),
+            TransactionType = TransactionType.Expense
+        });
+
+        var renamed = repository.RenameCategory("Mascotas", "Animales");
+        var categories = repository.LoadCategories();
+        var expenses = repository.Load();
+
+        Assert.True(renamed);
+        Assert.DoesNotContain("Mascotas", categories);
+        Assert.Contains("Animales", categories);
+        Assert.Contains(expenses, expense => expense.Id == "pet-1" && expense.Category == "Animales");
+    }
+
+    [Fact]
+    public void DeleteCategory_ReassignsExpensesToFallbackCategory()
+    {
+        var repository = new SqliteExpenseRepository(_databasePath);
+        repository.AddCategory("Temporal");
+        repository.Upsert(new Expense
+        {
+            Id = "tmp-1",
+            Description = "Temp",
+            Amount = 10m,
+            Category = "Temporal",
+            Date = new DateTime(2026, 3, 8),
+            TransactionType = TransactionType.Expense
+        });
+
+        var deleted = repository.DeleteCategory("Temporal");
+        var categories = repository.LoadCategories();
+        var expense = repository.Load().Single(x => x.Id == "tmp-1");
+
+        Assert.True(deleted);
+        Assert.DoesNotContain("Temporal", categories);
+        Assert.NotEqual("Temporal", expense.Category);
+    }
+
     public void Dispose()
     {
         SqliteConnection.ClearAllPools();

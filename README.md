@@ -26,6 +26,11 @@ The application currently supports:
 - Filter visible movements by category.
 - Sort visible movements by date, amount, or category.
 - Persist data locally using SQLite.
+- Persist categories in SQLite and manage them from the web UI.
+- Manage categories with add, rename, and delete operations.
+- Open category management from the application header.
+- Use the category manager as a popup modal.
+- Switch UI language between Spanish and English.
 
 ## Web UI Overview
 
@@ -33,10 +38,12 @@ The current web application includes:
 
 - A transaction form at the top of the page.
 - A toolbar with month, category, and sort selectors.
+- A header action to open category management.
 - A monthly summary row placed above the movements and charts area for better visibility.
 - A main transaction list with inline editing.
 - A category distribution chart rendered as a donut.
 - An income vs expenses comparison rendered as a bar chart.
+- A category management popup with add/edit/delete actions.
 
 Date handling is standardized in the application logic around `dd/MM/yyyy`.
 
@@ -63,11 +70,11 @@ The project now combines reusable business logic with a Blazor web front end.
 
 - Services/
   - Business and application rules.
-  - Includes validation, sorting, monthly summaries, and chart-oriented data logic.
+  - Includes validation, sorting, monthly summaries, category management, presentation formatting, and chart-oriented data logic.
 
 - Domain/Repositories/
   - Data access contracts.
-  - Example: `IExpenseRepository`.
+  - Examples: `IExpenseRepository`, `ICategoryRepository`.
 
 - Infrastructure/Repositories/
   - Concrete persistence implementation.
@@ -78,10 +85,11 @@ Core rule:
 - UI depends on abstractions and domain services.
 - Persistence is isolated in the repository layer.
 - Business logic remains reusable outside the UI.
+- Expense and category flows are separated into dedicated application services.
 
 ## Data Persistence
 
-Transactions are stored locally in SQLite.
+Transactions and categories are stored locally in SQLite.
 
 Current storage details:
 
@@ -95,24 +103,28 @@ Additional persistence improvements applied:
 - Amounts are stored as text using invariant decimal serialization to avoid floating-point precision issues.
 - Saves now use upsert and delete-missing behavior instead of deleting and recreating the entire table every time.
 - Legacy SQLite schemas are migrated automatically on startup.
+- Categories are stored in a dedicated `Categories` table.
+- Existing categories in legacy expenses are auto-seeded into the category catalog.
+- Renaming a category updates linked expenses.
+- Deleting a category reassigns linked expenses to a fallback category.
 
 ## Categories
 
-The application currently includes these categories:
+Default categories now include:
 
-- Shopping
-- Rent
-- Dining
-- Food
-- Fuel
-- Health
-- Bills
-- Loans
-- Utilities
-- Entertainment
-- Travels
-- Other
-- Income
+- Ingresos
+- Cuotas
+- Suscripciones
+- Salud
+- Hogar
+- Alimentación
+- Vehículos
+- Viajes
+- Ocio
+- Restaurantes
+- Compras
+
+Users can add, edit, and delete categories directly from the UI. Categories are persisted in the database.
 
 ## Requirements
 
@@ -149,6 +161,10 @@ Current coverage includes:
 - `ExpenseService` validation, filtering, and sorting.
 - `MonthlySummaryService` monthly summary calculations.
 - `SqliteExpenseRepository` persistence, migration, decimal-safe storage, and delete/update behavior.
+- `SqliteExpenseRepository` category catalog CRUD and category-to-expense synchronization.
+- `ExpenseApplicationService` category validation and CRUD orchestration.
+- `ExpenseDashboardService` category totals behavior for income-category exclusions.
+- `CategoryManagerUiState` popup open/close state transitions and event notifications.
 
 Run tests:
 
@@ -173,4 +189,7 @@ The application now runs as a web app instead of a desktop app and currently pro
 - Month-based transaction browsing.
 - Inline editing and deletion.
 - Visual monthly charts and summary cards.
+- Header-driven category management popup.
+- Category CRUD persisted in SQLite.
+- Spanish/English localization.
 - Automated tests for services and repository behavior.

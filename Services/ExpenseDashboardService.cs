@@ -7,11 +7,16 @@ public class ExpenseDashboardService
 {
     private readonly ExpenseService _expenseService;
     private readonly MonthlySummaryService _monthlySummaryService;
+    private readonly CategoryMappingService _categoryMappingService;
 
-    public ExpenseDashboardService(ExpenseService expenseService, MonthlySummaryService monthlySummaryService)
+    public ExpenseDashboardService(
+        ExpenseService expenseService,
+        MonthlySummaryService monthlySummaryService,
+        CategoryMappingService categoryMappingService)
     {
         _expenseService = expenseService;
         _monthlySummaryService = monthlySummaryService;
+        _categoryMappingService = categoryMappingService;
     }
 
     public List<MonthOption> GetAvailableMonths(List<Expense> allExpenses, DateTime referenceDate)
@@ -71,8 +76,9 @@ public class ExpenseDashboardService
     public List<CategoryTotal> GetExpenseCategoryTotals(List<Expense> visibleExpenses)
     {
         return visibleExpenses
-            .Where(expense => expense.TransactionType == TransactionType.Expense && expense.Category != AppConfiguration.IncomeCategory)
-            .GroupBy(expense => expense.Category)
+            .Where(expense => expense.TransactionType == TransactionType.Expense
+                && !_categoryMappingService.IsIncomeCategory(expense.Category))
+            .GroupBy(expense => _categoryMappingService.NormalizeCategory(expense.Category))
             .Select(group => new CategoryTotal(group.Key, group.Sum(expense => expense.Amount)))
             .OrderByDescending(item => item.Total)
             .ToList();

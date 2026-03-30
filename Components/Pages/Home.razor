@@ -1,16 +1,39 @@
 @page "/"
 
 @inject ExpenseApplicationService ExpenseApplicationService
+@inject CategoryApplicationService CategoryApplicationService
 @inject ExpenseDashboardService ExpenseDashboardService
 @inject ExpenseService ExpenseService
+@inject PresentationFormattingService PresentationFormattingService
+@inject LocalizationService LocalizationService
+@inject CategoryManagerUiState CategoryManagerUiState
+@using FinanceProject.Services
+@using FinanceProject.Configuration
+@implements IAsyncDisposable
 
 <PageTitle>Expense Manager</PageTitle>
 
 <div class="page">
     <header class="hero">
-        <div>
-            <h1>Expense Manager</h1>
-            <p>Track your money with clarity, one month at a time.</p>
+        <div class="hero-content">
+            <div>
+                <h1>Expense Manager</h1>
+                <p>Track your money with clarity, one month at a time.</p>
+            </div>
+            <div class="hero-actions">
+                <button class="ghost" @onclick="ToggleCategoryManager">
+                    @(CategoryManagerUiState.IsOpen ? LocalizationService.T("hide_categories") : LocalizationService.T("manage_categories"))
+                </button>
+                <div class="language-selector">
+                    <label>
+                        <span>@LocalizationService.T("language")</span>
+                        <select @onchange="OnLanguageChanged">
+                            <option value="@Language.Spanish" selected="@(LocalizationService.CurrentLanguage == Language.Spanish)">Español</option>
+                            <option value="@Language.English" selected="@(LocalizationService.CurrentLanguage == Language.English)">English</option>
+                        </select>
+                    </label>
+                </div>
+            </div>
         </div>
     </header>
 
@@ -22,86 +45,132 @@
     <section class="panel form-panel">
         <div class="grid form-grid">
             <label>
-                <span>Description</span>
+                <span>@LocalizationService.T("description")</span>
                 <input @bind="PageState.NewExpense.Description" @bind:event="oninput" />
             </label>
             <label>
-                <span>Type</span>
+                <span>@LocalizationService.T("transaction_type")</span>
                 <select @bind="PageState.NewExpenseTypeText">
                     @foreach (var transactionType in AppConfiguration.TransactionTypes)
                     {
-                        <option value="@transactionType">@transactionType</option>
+                        <option value="@transactionType">@PresentationFormattingService.GetTransactionTypeLabel(transactionType)</option>
                     }
                 </select>
             </label>
             <label>
-                <span>Date (dd/MM/yyyy)</span>
+                <span>@LocalizationService.T("date")</span>
                 <InputDate @bind-Value="PageState.NewExpense.Date" />
             </label>
             <label>
-                <span>Category</span>
+                <span>@LocalizationService.T("category")</span>
                 <select @bind="PageState.NewExpense.Category">
-                    @foreach (var category in AppConfiguration.Categories)
+                    @foreach (var category in ManagedCategories)
                     {
-                        <option value="@category">@category</option>
+                        <option value="@category">@PresentationFormattingService.GetCategoryLabel(category)</option>
                     }
                 </select>
             </label>
             <label>
-                <span>Amount (EUR)</span>
+                <span>@LocalizationService.T("amount_eur")</span>
                 <InputNumber @bind-Value="PageState.NewExpense.Amount" step="0.01" />
             </label>
             <div class="action-slot">
-                <button class="primary" @onclick="AddExpenseAsync">Add</button>
+                <button class="primary" @onclick="AddExpenseAsync">@LocalizationService.T("add")</button>
             </div>
         </div>
     </section>
 
     <section class="panel toolbar">
         <label>
-            <span>Month</span>
+            <span>@LocalizationService.T("month")</span>
             <select @bind="SelectedMonthKey">
                 @foreach (var month in AvailableMonths)
                 {
-                    <option value="@month.Key">@month.DisplayName</option>
+                    <option value="@month.Key">@PresentationFormattingService.GetMonthLabel(month.Year, month.Month)</option>
                 }
             </select>
         </label>
         <label>
-            <span>Filter by category</span>
+            <span>@LocalizationService.T("category")</span>
             <select @bind="SelectedCategory">
-                @foreach (var category in AppConfiguration.FilterCategories)
+                @foreach (var category in FilterCategories)
                 {
-                    <option value="@category">@category</option>
+                    <option value="@category">@PresentationFormattingService.GetCategoryLabel(category)</option>
                 }
             </select>
         </label>
         <label>
-            <span>Sort by</span>
+            <span>@LocalizationService.T("sort")</span>
             <select @bind="SelectedSortOption">
                 @foreach (var option in AppConfiguration.SortOptions)
                 {
-                    <option value="@option.Option">@option.Label</option>
+                    <option value="@option.Option">@PresentationFormattingService.GetSortOptionLabel(option.Option)</option>
                 }
             </select>
         </label>
     </section>
 
+    @if (CategoryManagerUiState.IsOpen)
+    {
+        <div class="category-modal-overlay" @onclick="CloseCategoryManager">
+            <section class="panel category-manager category-manager-modal" @onclick:stopPropagation="true">
+                <div class="category-manager-header">
+                    <h3>@LocalizationService.T("manage_categories")</h3>
+                    <button class="ghost" @onclick="CloseCategoryManager">@LocalizationService.T("close")</button>
+                </div>
+
+                <div class="category-manager-add">
+                    <input
+                        placeholder="@LocalizationService.T("category_name_placeholder")"
+                        @bind="NewCategoryName"
+                        @bind:event="oninput" />
+                    <button class="primary" @onclick="AddCategoryAsync">@LocalizationService.T("add_category")</button>
+                </div>
+
+                <div class="category-manager-list">
+                    @foreach (var category in ManagedCategories)
+                    {
+                        var isEditingCategory = string.Equals(EditingCategoryOriginal, category, StringComparison.OrdinalIgnoreCase);
+
+                        <div class="category-manager-item">
+                            @if (isEditingCategory)
+                            {
+                                <input class="row-input" @bind="EditingCategoryName" @bind:event="oninput" />
+                                <div class="row-actions">
+                                    <button class="ghost" @onclick="SaveCategoryEditAsync">@LocalizationService.T("save")</button>
+                                    <button class="ghost danger" @onclick="CancelCategoryEdit">@LocalizationService.T("cancel")</button>
+                                </div>
+                            }
+                            else
+                            {
+                                <span>@PresentationFormattingService.GetCategoryLabel(category)</span>
+                                <div class="row-actions">
+                                    <button class="ghost" @onclick="() => BeginCategoryEdit(category)">@LocalizationService.T("edit")</button>
+                                    <button class="ghost danger" @onclick="() => DeleteCategoryAsync(category)">@LocalizationService.T("delete")</button>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </section>
+        </div>
+    }
+
     <footer class="summary-grid">
         <div class="summary-card">
-            <span>Month</span>
+            <span>@LocalizationService.T("month")</span>
             <strong>@SelectedMonthLabel</strong>
         </div>
         <div class="summary-card income">
-            <span>Income</span>
+            <span>@LocalizationService.T("income")</span>
             <strong>@CurrentSummary.TotalIncome.ToString("C2", CultureInfo.CurrentCulture)</strong>
         </div>
         <div class="summary-card expense">
-            <span>Expenses</span>
+            <span>@LocalizationService.T("expense")</span>
             <strong>@CurrentSummary.TotalExpenses.ToString("C2", CultureInfo.CurrentCulture)</strong>
         </div>
         <div class="summary-card balance">
-            <span>Balance</span>
+            <span>@LocalizationService.T("balance")</span>
             <strong>@CurrentSummary.Balance.ToString("C2", CultureInfo.CurrentCulture)</strong>
         </div>
     </footer>
@@ -109,18 +178,18 @@
     <section class="content-grid">
         <div class="panel list-panel">
             <div class="list-header">
-                <span>Date (dd/MM/yyyy)</span>
-                <span>Type</span>
-                <span>Category</span>
-                <span>Description</span>
-                <span>Amount (EUR)</span>
+                <span>@LocalizationService.T("date")</span>
+                <span>@LocalizationService.T("type")</span>
+                <span>@LocalizationService.T("category")</span>
+                <span>@LocalizationService.T("description")</span>
+                <span>@LocalizationService.T("amount")</span>
                 <span></span>
             </div>
 
             <div class="list-scroll">
                 @if (VisibleExpenses.Count == 0)
                 {
-                    <div class="empty-state">No transactions found for the selected month.</div>
+                    <div class="empty-state">@LocalizationService.T("no_transactions")</div>
                 }
                 else
                 {
@@ -134,32 +203,32 @@
                                 <select class="row-input" @bind="PageState.EditingExpenseTypeText">
                                     @foreach (var transactionType in AppConfiguration.TransactionTypes)
                                     {
-                                        <option value="@transactionType">@transactionType</option>
+                                        <option value="@transactionType">@PresentationFormattingService.GetTransactionTypeLabel(transactionType)</option>
                                     }
                                 </select>
                                 <select class="row-input" @bind="PageState.EditingExpense!.Category">
-                                    @foreach (var category in AppConfiguration.Categories)
+                                    @foreach (var category in ManagedCategories)
                                     {
-                                        <option value="@category">@category</option>
+                                        <option value="@category">@PresentationFormattingService.GetCategoryLabel(category)</option>
                                     }
                                 </select>
                                 <input class="row-input" @bind="PageState.EditingExpense!.Description" @bind:event="oninput" />
                                 <InputNumber class="row-input" @bind-Value="PageState.EditingExpense!.Amount" step="0.01" />
                                 <div class="row-actions">
-                                    <button class="ghost" @onclick="SaveEditAsync">Save</button>
-                                    <button class="ghost danger" @onclick="CancelEdit">Cancel</button>
+                                    <button class="ghost" @onclick="SaveEditAsync">@LocalizationService.T("save")</button>
+                                    <button class="ghost danger" @onclick="CancelEdit">@LocalizationService.T("cancel")</button>
                                 </div>
                             }
                             else
                             {
                                 <span>@expense.Date.ToString("dd/MM/yyyy")</span>
-                                <span class="type-pill @(expense.TransactionType == TransactionType.Income ? "income" : "expense")">@expense.TransactionType</span>
-                                <span>@expense.Category</span>
+                                <span class="type-pill @(expense.TransactionType == TransactionType.Income ? "income" : "expense")">@PresentationFormattingService.GetTransactionTypeLabel(expense.TransactionType)</span>
+                                <span>@PresentationFormattingService.GetCategoryLabel(expense.Category)</span>
                                 <span>@expense.Description</span>
                                 <span>@expense.Amount.ToString("C2", CultureInfo.CurrentCulture)</span>
                                 <div class="row-actions">
-                                    <button class="ghost" @onclick="() => BeginEdit(expense)">Edit</button>
-                                    <button class="ghost danger" @onclick="() => DeleteExpenseAsync(expense.Id)">Delete</button>
+                                    <button class="ghost" @onclick="() => BeginEdit(expense)">@LocalizationService.T("edit")</button>
+                                    <button class="ghost danger" @onclick="() => DeleteExpenseAsync(expense.Id)">@LocalizationService.T("delete")</button>
                                 </div>
                             }
                         </div>
@@ -171,12 +240,12 @@
         <div class="charts-column">
             <div class="panel chart-panel">
                 <div class="chart-header">
-                    <h2>Expense Distribution by Category</h2>
+                    <h2>@LocalizationService.T("expense_distribution")</h2>
                     <span>@SelectedMonthLabel</span>
                 </div>
                 @if (CategoryChartItems.Count == 0)
                 {
-                    <div class="empty-state">No expense data for this month.</div>
+                    <div class="empty-state">@LocalizationService.T("no_expense_data")</div>
                 }
                 else
                 {
@@ -184,7 +253,7 @@
                         <div class="donut" style="@GetDonutStyle()">
                             <div class="donut-hole">
                                 <strong>@CurrentSummary.TotalExpenses.ToString("C0", CultureInfo.CurrentCulture)</strong>
-                                <span>Expenses</span>
+                                <span>@LocalizationService.T("expenses_total")</span>
                             </div>
                         </div>
                         <div class="legend">
@@ -192,7 +261,7 @@
                             {
                                 <div class="legend-item">
                                     <span class="legend-color" style="background:@item.Color"></span>
-                                    <span>@item.Category</span>
+                                    <span>@PresentationFormattingService.GetCategoryLabel(item.Category)</span>
                                     <strong>@item.Total.ToString("C2", CultureInfo.CurrentCulture)</strong>
                                 </div>
                             }
@@ -203,7 +272,7 @@
 
             <div class="panel chart-panel">
                 <div class="chart-header">
-                    <h2>Income vs Expenses</h2>
+                    <h2>@LocalizationService.T("income_vs_expenses")</h2>
                     <span>@SelectedMonthLabel</span>
                 </div>
                 <div class="bar-chart">
@@ -211,14 +280,14 @@
                         <div class="bar-area">
                             <div class="bar income" style="height:@GetBarHeight(CurrentSummary.TotalIncome)"></div>
                         </div>
-                        <span>Income</span>
+                        <span>@LocalizationService.T("income")</span>
                         <strong>@CurrentSummary.TotalIncome.ToString("C2", CultureInfo.CurrentCulture)</strong>
                     </div>
                     <div class="bar-group">
                         <div class="bar-area">
                             <div class="bar expense" style="height:@GetBarHeight(CurrentSummary.TotalExpenses)"></div>
                         </div>
-                        <span>Expenses</span>
+                        <span>@LocalizationService.T("expense")</span>
                         <strong>@CurrentSummary.TotalExpenses.ToString("C2", CultureInfo.CurrentCulture)</strong>
                     </div>
                 </div>
@@ -245,10 +314,20 @@
 
     private readonly HomePageState PageState = new();
     private List<Expense> AllExpenses { get; set; } = [];
+    private List<string> ManagedCategories { get; set; } = [];
     private string SelectedCategory { get; set; } = AppConfiguration.AllCategoriesLabel;
     private ExpenseSortOption SelectedSortOption { get; set; } = AppConfiguration.DefaultSortOption;
     private string _selectedMonthKey = string.Empty;
+    private string NewCategoryName { get; set; } = string.Empty;
+    private string? EditingCategoryOriginal { get; set; }
+    private string EditingCategoryName { get; set; } = string.Empty;
     private string? ErrorMessage { get; set; }
+
+    private List<string> FilterCategories =>
+    [
+        AppConfiguration.AllCategoriesLabel,
+        ..ManagedCategories
+    ];
 
     private string SelectedMonthKey
     {
@@ -282,19 +361,151 @@
     private List<CategoryChartItem> CategoryChartItems => BuildCategoryChartItems();
 
     private MonthOption? SelectedMonthOption => TryParseMonth(SelectedMonthKey);
-    private string SelectedMonthLabel => SelectedMonthOption?.DisplayName ?? CurrentSummary.MonthName;
+    private string SelectedMonthLabel => SelectedMonthOption is { } month
+        ? PresentationFormattingService.GetMonthLabel(month.Year, month.Month)
+        : CurrentSummary.MonthName;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
+        await LocalizationService.InitializeAsync();
+        LocalizationService.OnLanguageChanged += StateHasChanged;
+        CategoryManagerUiState.OnChange += StateHasChanged;
         ReloadExpenses();
     }
 
     private void ReloadExpenses(DateTime? preferredMonth = null)
     {
+        LoadCategories();
         AllExpenses = ExpenseApplicationService.GetAllExpenses();
         EnsureSelectedMonth(preferredMonth);
         PageState.ResetNewExpense(BuildDateInSelectedMonth(DateTime.Today.Day));
+
+        if (!ManagedCategories.Contains(PageState.NewExpense.Category, StringComparer.OrdinalIgnoreCase))
+        {
+            PageState.NewExpense.Category = ResolveDefaultCategory();
+        }
+
+        if (SelectedCategory != AppConfiguration.AllCategoriesLabel
+            && !ManagedCategories.Contains(SelectedCategory, StringComparer.OrdinalIgnoreCase))
+        {
+            SelectedCategory = AppConfiguration.AllCategoriesLabel;
+        }
+
+        if (PageState.EditingExpense is not null
+            && !ManagedCategories.Contains(PageState.EditingExpense.Category, StringComparer.OrdinalIgnoreCase))
+        {
+            PageState.EditingExpense.Category = ResolveDefaultCategory();
+        }
+
         ErrorMessage = null;
+    }
+
+    private void LoadCategories()
+    {
+        ManagedCategories = CategoryApplicationService.GetAllCategories();
+        if (ManagedCategories.Count == 0)
+        {
+            ManagedCategories = AppConfiguration.Categories.ToList();
+        }
+    }
+
+    private string ResolveDefaultCategory()
+    {
+        var defaultCategory = ManagedCategories.FirstOrDefault(category =>
+            string.Equals(category, AppConfiguration.DefaultCategory, StringComparison.OrdinalIgnoreCase));
+
+        return defaultCategory
+            ?? ManagedCategories.FirstOrDefault()
+            ?? AppConfiguration.DefaultCategory;
+    }
+
+    private async Task AddCategoryAsync()
+    {
+        if (!CategoryApplicationService.AddCategory(NewCategoryName, out var errorKey))
+        {
+            SetCategoryError(errorKey);
+            return;
+        }
+
+        NewCategoryName = string.Empty;
+        ReloadExpenses();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void CloseCategoryManager()
+    {
+        CancelCategoryEdit();
+        NewCategoryName = string.Empty;
+        CategoryManagerUiState.Close();
+    }
+
+    private void BeginCategoryEdit(string category)
+    {
+        EditingCategoryOriginal = category;
+        EditingCategoryName = category;
+        ErrorMessage = null;
+    }
+
+    private void CancelCategoryEdit()
+    {
+        EditingCategoryOriginal = null;
+        EditingCategoryName = string.Empty;
+    }
+
+    private async Task SaveCategoryEditAsync()
+    {
+        if (string.IsNullOrWhiteSpace(EditingCategoryOriginal))
+        {
+            return;
+        }
+
+        if (!CategoryApplicationService.RenameCategory(EditingCategoryOriginal, EditingCategoryName, out var errorKey))
+        {
+            SetCategoryError(errorKey);
+            return;
+        }
+
+        CancelCategoryEdit();
+        ReloadExpenses();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task DeleteCategoryAsync(string category)
+    {
+        if (!CategoryApplicationService.DeleteCategory(category, out var errorKey))
+        {
+            SetCategoryError(errorKey);
+            return;
+        }
+
+        if (string.Equals(EditingCategoryOriginal, category, StringComparison.OrdinalIgnoreCase))
+        {
+            CancelCategoryEdit();
+        }
+
+        ReloadExpenses();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private void SetCategoryError(string? errorKey)
+    {
+        ErrorMessage = string.IsNullOrWhiteSpace(errorKey)
+            ? LocalizationService.T("category_error_generic")
+            : LocalizationService.T(errorKey);
+    }
+
+    private async Task OnLanguageChanged(ChangeEventArgs e)
+    {
+        if (Enum.TryParse<Language>(e.Value?.ToString(), out var language))
+        {
+            await LocalizationService.SetLanguageAsync(language);
+            StateHasChanged();
+        }
+    }
+
+    private void ToggleCategoryManager()
+    {
+        CategoryManagerUiState.Toggle();
     }
 
     private async Task AddExpenseAsync()
@@ -448,6 +659,13 @@
         return Enum.TryParse<TransactionType>(value, out var result)
             ? result
             : TransactionType.Expense;
+    }
+
+    async ValueTask IAsyncDisposable.DisposeAsync()
+    {
+        LocalizationService.OnLanguageChanged -= StateHasChanged;
+        CategoryManagerUiState.OnChange -= StateHasChanged;
+        await Task.CompletedTask;
     }
 
     private sealed record MonthViewModel(int Year, int Month)

@@ -75,7 +75,7 @@ public sealed class HomePageState
         return new Expense
         {
             Date = date ?? DateTime.Today,
-            Category = AppConfiguration.Categories[0],
+            Category = AppConfiguration.DefaultCategory,
             TransactionType = TransactionType.Expense
         };
     }

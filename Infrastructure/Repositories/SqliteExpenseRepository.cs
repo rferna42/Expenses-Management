@@ -7,8 +7,9 @@ using Microsoft.Data.Sqlite;
 
 namespace FinanceProject.Infrastructure.Repositories;
 
-public class SqliteExpenseRepository : IExpenseRepository
+public class SqliteExpenseRepository : IExpenseRepository, ICategoryRepository
 {
+    private const string LegacyIncomeCategory = "Income";
     private readonly string _connectionString;
 
     public SqliteExpenseRepository(string? databasePath = null)
@@ -140,6 +141,148 @@ public class SqliteExpenseRepository : IExpenseRepository
         command.ExecuteNonQuery();
     }
 
+    public List<string> LoadCategories()
+    {
+        var categories = new List<string>();
+
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT Name FROM Categories ORDER BY SortOrder ASC, Name ASC;";
+
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            categories.Add(reader.GetString(0));
+        }
+
+        return categories;
+    }
+
+    public bool CategoryExists(string categoryName)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT COUNT(*) FROM Categories WHERE Name = $name COLLATE NOCASE;";
+        command.Parameters.AddWithValue("$name", categoryName.Trim());
+
+        return Convert.ToInt32(command.ExecuteScalar()) > 0;
+    }
+
+    public void AddCategory(string categoryName)
+    {
+        var normalizedName = categoryName.Trim();
+
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            INSERT INTO Categories (Name, SortOrder)
+            VALUES ($name, COALESCE((SELECT MAX(SortOrder) + 1 FROM Categories), 0));
+            """;
+        command.Parameters.AddWithValue("$name", normalizedName);
+        command.ExecuteNonQuery();
+    }
+
+    public bool RenameCategory(string currentName, string newName)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        using var transaction = connection.BeginTransaction();
+
+        using var updateCategoryCommand = connection.CreateCommand();
+        updateCategoryCommand.Transaction = transaction;
+        updateCategoryCommand.CommandText = """
+            UPDATE Categories
+            SET Name = $newName
+            WHERE Name = $currentName COLLATE NOCASE;
+            """;
+        updateCategoryCommand.Parameters.AddWithValue("$newName", newName.Trim());
+        updateCategoryCommand.Parameters.AddWithValue("$currentName", currentName.Trim());
+
+        var affectedRows = updateCategoryCommand.ExecuteNonQuery();
+        if (affectedRows == 0)
+        {
+            transaction.Rollback();
+            return false;
+        }
+
+        using var updateExpensesCommand = connection.CreateCommand();
+        updateExpensesCommand.Transaction = transaction;
+        updateExpensesCommand.CommandText = """
+            UPDATE Expenses
+            SET Category = $newName
+            WHERE Category = $currentName COLLATE NOCASE;
+            """;
+        updateExpensesCommand.Parameters.AddWithValue("$newName", newName.Trim());
+        updateExpensesCommand.Parameters.AddWithValue("$currentName", currentName.Trim());
+        updateExpensesCommand.ExecuteNonQuery();
+
+        transaction.Commit();
+        return true;
+    }
+
+    public bool DeleteCategory(string categoryName)
+    {
+        using var connection = new SqliteConnection(_connectionString);
+        connection.Open();
+
+        using var transaction = connection.BeginTransaction();
+
+        using var countCommand = connection.CreateCommand();
+        countCommand.Transaction = transaction;
+        countCommand.CommandText = "SELECT COUNT(*) FROM Categories;";
+        var categoryCount = Convert.ToInt32(countCommand.ExecuteScalar());
+        if (categoryCount <= 1)
+        {
+            transaction.Rollback();
+            return false;
+        }
+
+        using var fallbackCommand = connection.CreateCommand();
+        fallbackCommand.Transaction = transaction;
+        fallbackCommand.CommandText = """
+            SELECT Name
+            FROM Categories
+            WHERE Name != $name COLLATE NOCASE
+            ORDER BY SortOrder ASC, Name ASC
+            LIMIT 1;
+            """;
+        fallbackCommand.Parameters.AddWithValue("$name", categoryName.Trim());
+        var fallbackCategory = fallbackCommand.ExecuteScalar() as string;
+
+        if (string.IsNullOrWhiteSpace(fallbackCategory))
+        {
+            transaction.Rollback();
+            return false;
+        }
+
+        using var updateExpensesCommand = connection.CreateCommand();
+        updateExpensesCommand.Transaction = transaction;
+        updateExpensesCommand.CommandText = """
+            UPDATE Expenses
+            SET Category = $fallback
+            WHERE Category = $name COLLATE NOCASE;
+            """;
+        updateExpensesCommand.Parameters.AddWithValue("$fallback", fallbackCategory);
+        updateExpensesCommand.Parameters.AddWithValue("$name", categoryName.Trim());
+        updateExpensesCommand.ExecuteNonQuery();
+
+        using var deleteCategoryCommand = connection.CreateCommand();
+        deleteCategoryCommand.Transaction = transaction;
+        deleteCategoryCommand.CommandText = "DELETE FROM Categories WHERE Name = $name COLLATE NOCASE;";
+        deleteCategoryCommand.Parameters.AddWithValue("$name", categoryName.Trim());
+        var deletedRows = deleteCategoryCommand.ExecuteNonQuery();
+
+        transaction.Commit();
+        return deletedRows > 0;
+    }
+
     private void EnsureDatabase()
     {
         using var connection = new SqliteConnection(_connectionString);
@@ -148,15 +291,16 @@ public class SqliteExpenseRepository : IExpenseRepository
         if (!TableExists(connection))
         {
             CreateSchema(connection);
-            return;
         }
-
-        if (SchemaMigrationRequired(connection))
+        else if (SchemaMigrationRequired(connection))
         {
             MigrateSchema(connection);
         }
 
+        EnsureCategoriesSchema(connection);
         CreateIndexes(connection);
+        CreateCategoryIndexes(connection);
+        SeedCategories(connection);
     }
 
     private static bool TableExists(SqliteConnection connection)
@@ -256,6 +400,108 @@ public class SqliteExpenseRepository : IExpenseRepository
             CREATE INDEX IF NOT EXISTS IX_Expenses_Category ON Expenses(Category);
             CREATE INDEX IF NOT EXISTS IX_Expenses_TransactionType ON Expenses(TransactionType);
             """;
+        command.ExecuteNonQuery();
+    }
+
+    private static void CreateCategoryIndexes(SqliteConnection connection)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = "CREATE INDEX IF NOT EXISTS IX_Categories_SortOrder ON Categories(SortOrder);";
+        command.ExecuteNonQuery();
+    }
+
+    private static void EnsureCategoriesSchema(SqliteConnection connection)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            CREATE TABLE IF NOT EXISTS Categories (
+                Name TEXT NOT NULL PRIMARY KEY COLLATE NOCASE,
+                SortOrder INTEGER NOT NULL
+            );
+            """;
+        command.ExecuteNonQuery();
+    }
+
+    private static void SeedCategories(SqliteConnection connection)
+    {
+        EnsureCategoriesSchema(connection);
+
+        var categories = LoadCategoryNames(connection);
+        if (categories.Count == 0)
+        {
+            for (int index = 0; index < AppConfiguration.Categories.Count; index++)
+            {
+                InsertCategory(connection, AppConfiguration.Categories[index], index);
+            }
+
+            categories = LoadCategoryNames(connection);
+        }
+
+        var expenseCategories = LoadExpenseCategoryNames(connection);
+        var categorySet = new HashSet<string>(categories, StringComparer.OrdinalIgnoreCase);
+
+        foreach (var expenseCategory in expenseCategories)
+        {
+            if (categorySet.Contains(expenseCategory))
+            {
+                continue;
+            }
+
+            var nextOrder = categories.Count;
+            InsertCategory(connection, expenseCategory, nextOrder);
+            categories.Add(expenseCategory);
+            categorySet.Add(expenseCategory);
+        }
+
+        if (categorySet.Contains(LegacyIncomeCategory)
+            && !categorySet.Contains(AppConfiguration.IncomeCategory))
+        {
+            var nextOrder = categories.Count;
+            InsertCategory(connection, AppConfiguration.IncomeCategory, nextOrder);
+        }
+    }
+
+    private static List<string> LoadCategoryNames(SqliteConnection connection)
+    {
+        var categories = new List<string>();
+
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT Name FROM Categories ORDER BY SortOrder ASC, Name ASC;";
+
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            categories.Add(reader.GetString(0));
+        }
+
+        return categories;
+    }
+
+    private static List<string> LoadExpenseCategoryNames(SqliteConnection connection)
+    {
+        var categories = new List<string>();
+
+        using var command = connection.CreateCommand();
+        command.CommandText = "SELECT DISTINCT Category FROM Expenses WHERE Category IS NOT NULL AND trim(Category) <> '';";
+
+        using var reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            categories.Add(reader.GetString(0));
+        }
+
+        return categories;
+    }
+
+    private static void InsertCategory(SqliteConnection connection, string categoryName, int sortOrder)
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = """
+            INSERT OR IGNORE INTO Categories (Name, SortOrder)
+            VALUES ($name, $sortOrder);
+            """;
+        command.Parameters.AddWithValue("$name", categoryName.Trim());
+        command.Parameters.AddWithValue("$sortOrder", sortOrder);
         command.ExecuteNonQuery();
     }
 
